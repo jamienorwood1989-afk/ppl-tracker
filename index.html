@@ -63,6 +63,14 @@ th{color:var(--mut);font-size:12px;font-weight:600}
 .exops{display:flex;gap:4px;margin-bottom:10px}
 .exops button{flex:1;padding:4px 0;min-height:34px;font-size:13px}
 .section{margin-top:20px}
+#modal{position:fixed;inset:0;background:rgba(5,8,12,.72);display:none;align-items:flex-end;justify-content:center;z-index:60}
+#modal.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:660px;max-height:86vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px 28px;border:1px solid var(--line);border-bottom:0}
+.sheet h3{margin:0 0 8px;font-size:17px}
+.gvid{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin:10px 0;background:#000}
+.altrow{display:block;width:100%;text-align:left;padding:12px;margin:6px 0;background:var(--card2);border:1px solid var(--line);color:var(--tx);border-radius:10px;font-size:14.5px}
+.exbtns{display:flex;gap:6px;margin-top:10px}
+.exbtns button{flex:1;min-height:40px;font-size:13px;padding:6px 2px}
 </style>
 </head>
 <body>
@@ -75,6 +83,7 @@ th{color:var(--mut);font-size:12px;font-weight:600}
   <button class="navb" data-tab="program" onclick="nav('program')"><span class="ic">⚙️</span>Program</button>
 </nav>
 <div id="toast"></div>
+<div id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="sheet"></div></div>
 <script>
 'use strict';
 window.__errs=[]; window.onerror=function(m){window.__errs.push(String(m));};
@@ -102,6 +111,93 @@ const DEFAULT_CARDIO={
  upper:{type:'Warm-up cardio',detail:'5 min light before lifting'},
  core:{type:'Cool-down walk',detail:'5 min'}
 };
+
+/* ============ v3: video links (verified 2026-11-05) ============ */
+const VIDS={
+'flat barbell bench press':'CayG6UYqL8g','incline dumbbell press':'PiUUMXCuEfo',
+'shoulder press machine':'itVoCMDtaBg','cable lateral raises':'VDHOKMN7lVE',
+'rope cable tricep pushdowns':'Zc4R0Tmw1MI','dumbbell bench press':'EipJ3n7934s',
+'machine chest press':'3gM2jGQJffk','weighted push-up':'jDvuRh9nYD4',
+'tricep dips':'GQYQmQyydPA','ez bar skull crusher':'KbIcbOpIEqE',
+'lat pulldown':'a2SMX9ZZ9As','plate-loaded seated row':'_zNZxLq0IpQ',
+'single-arm dumbbell row':'dFzUjzfih7k','face pulls':'0Po47vvj9g4',
+'ez-bar bicep curls':'S_i3SEVgKWU','assisted pull-up':'DYffAkq_D0g',
+'close-grip lat pulldown':'HPG5iPvoPFA','barbell row':'_ph6nGIbLoY',
+'hammer curl':'fZCNnjdCBc8','reverse pec deck':'maL4t2oI2Cg',
+'barbell back squat':'kscmyDIU-Tc','romanian deadlift':'V8Hdl1FiNt4',
+'leg press machine':'RJqP7noiDbs','seated hamstring curl':'Y9NfQbruY_E',
+'calf raises':'Lqpb-IiSFC4','front squat':'nZq6VdaLkdU',
+'goblet squat':'8nRDhf5f1b8','bulgarian split squat':'rah3eJCPXHA',
+'lying hamstring curl':'CaEhRV4HhQM','walking lunge':'kRzcRkKy1ns',
+'incline smith machine press':'boiOppJzKzQ','neutral-grip lat pulldown':'KgZqDuNx7rI',
+'standing db shoulder press':'jWriqmLrQqs','chest-supported db row':'cuIZGh-1QhI',
+'overhead cable tri ext':'5hSDnAVleGY','incline db curls':'KvmHxMFTXEQ',
+'arnold press':'xI73DjI2Bj4','dumbbell lateral raise':'xFzetByEqNA',
+'cable tricep kickback':'51dat68RgS0','incline dumbbell fly':'qTnyM0rktpk',
+'plank':'QpOgJLqeo14','hanging leg raise':'Nw0LOKe3_l8',
+'cable woodchop':'ZDt4MCvjMAA','dead bug':'JeeMlbhe0_0',
+'side plank':'44ND4bOB-T0','russian twist':'yckjJqPMyaY',
+'bicycle crunch':'7hTRt_FCB0k','ab wheel rollout':'PK4n7qJpOhM',
+'mountain climbers':'14-XoPdnzlI'
+};
+
+/* ============ v3: exercise guides + alternatives ============ */
+const LIB={
+'flat barbell bench press':{alt:['Dumbbell Bench Press','Machine Chest Press','Weighted Push-Up'],tips:['Lie on a flat bench, grip just outside shoulder width, feet planted.','Lower the bar to mid-chest with control, elbows ~45° to your torso.','Drive up and lock out, then lower for the full range.'],prog:'Add +2.5 kg per side when 5×6 is clean.'},
+'incline dumbbell press':{alt:['Dumbbell Bench Press','Incline Dumbbell Fly'],tips:['Set the bench to ~30°, press from shoulder height.','Keep elbows slightly tucked; don’t clang the dumbbells at the top.','Full stretch at the bottom, chest up.'],prog:'Add +1 kg per hand when 3×12 is solid.'},
+'shoulder press machine':{alt:['Standing DB Shoulder Press','Arnold Press'],tips:['Sit with your back flat, grips at shoulder width.','Press straight up without leaning back.','Lower slowly to a full stretch.'],prog:'Add +5 kg when 3×12 is clean.'},
+'cable lateral raises':{alt:['Dumbbell Lateral Raise'],tips:['Long arms, pulley at the bottom.','Raise out to the sides until level with the floor.','Lead with the elbows, slight bend in the arm.'],prog:'Add +1.25 kg when 3×15 is controlled.'},
+'rope cable tricep pushdowns':{alt:['Overhead Cable Tri Ext','Cable Tricep Kickback','EZ Bar Skull Crusher'],tips:['Elbows pinned to your sides, rope at the top.','Push down until arms lock, splitting the rope slightly.','Keep elbows from drifting forward.'],prog:'Add +2.5 kg when 3×15 is clean.'},
+'dumbbell bench press':{alt:['Flat Barbell Bench Press','Machine Chest Press'],tips:['Press from the lower chest, back flat.','Don’t clang at the top — keep tension.','Lower to the same spot each rep.'],prog:'Add +1 kg per hand when 3×12 is solid.'},
+'machine chest press':{alt:['Flat Barbell Bench Press','Dumbbell Bench Press'],tips:['Adjust the seat so the bar meets mid-chest.','Push with control, don’t lock elbows hard.','Lower slowly.'],prog:'Add +5 kg when 3×12 is clean.'},
+'weighted push-up':{alt:['Flat Barbell Bench Press','Machine Chest Press'],tips:['Start bodyweight, then add a vest or plates.','Brace hard, hips in a straight line.','Full range: chest to the floor, lockout on top.'],prog:'Add weight once 3×15 is easy.'},
+'tricep dips':{alt:['Rope Cable Tricep Pushdowns','EZ Bar Skull Crusher'],tips:['Lean slightly forward to bias the triceps.','Lower until elbows reach 90°.','Keep shoulders relaxed, no shrug.'],prog:'Add a belt once 12+ is easy.'},
+'ez bar skull crusher':{alt:['Rope Cable Tricep Pushdowns','Cable Tricep Kickback'],tips:['Elbows high and slightly flared.','Lower the bar to forehead level.','Extend fully — no elbow bend.'],prog:'Add +2.5 kg per side when 3×12 is clean.'},
+'lat pulldown':{alt:['Close-Grip Lat Pulldown','Barbell Row','Assisted Pull-Up'],tips:['Wide grip, pin shoulders down.','Pull to the upper chest, chest up.','Control the way up; don’t let the arms lock out.'],prog:'Add +5 kg when 4×10 is solid.'},
+'plate-loaded seated row':{alt:['Barbell Row','Single-Arm Dumbbell Row','Chest-Supported DB Row'],tips:['Drive elbows back, chest tall.','Pull to the lower ribs, squeeze blades.','Control the plates back.'],prog:'Add +5 kg when 4×10 is clean.'},
+'single-arm dumbbell row':{alt:['Barbell Row','Plate-Loaded Seated Row'],tips:['Hand and knee on the bench, back flat.','Pull to the hip, not the chest.','No rotation — keep your torso still.'],prog:'Add +1 kg when 4×10 is easy.'},
+'face pulls':{alt:['Reverse Pec Deck'],tips:['Rope at head height, pull to the side of your face.','Elbows high and wide.','Squeeze the rear delts — no swinging.'],prog:'Add +2.5 kg when 4×15 is solid.'},
+'ez-bar bicep curls':{alt:['Hammer Curl','Incline DB Curls'],tips:['Elbows pinned to your sides.','Curl to shoulder height, squeeze at the top.','No swinging; lower over 2–3 seconds.'],prog:'Add +2.5 kg per side when 3×12 is clean.'},
+'assisted pull-up':{alt:['Lat Pulldown (Wide Grip)','Close-Grip Lat Pulldown'],tips:['Set the assist so 3×8 is a challenge.','Chin over the bar, chest up.','Control the descent — don’t drop.'],prog:'Reduce the assist one level each week.'},
+'close-grip lat pulldown':{alt:['Lat Pulldown (Wide Grip)','Assisted Pull-Up'],tips:['Narrow neutral grip, pull to the upper chest.','Keep the torso mostly vertical, slight lean.','Elbows travel down and back.'],prog:'Add +5 kg when 4×10 is solid.'},
+'barbell row':{alt:['Plate-Loaded Seated Row','Single-Arm Dumbbell Row'],tips:['Hinge until torso is near parallel, back flat.','Pull to the lower ribs.','No kipping — control the lowering.'],prog:'Add +2.5 kg per side when 4×8 is clean.'},
+'hammer curl':{alt:['EZ-Bar Bicep Curls','Incline DB Curls'],tips:['Palms facing each other, elbows at your sides.','Curl to shoulder height, squeeze.','Slow negatives.'],prog:'Add +1 kg when 4×12 is easy.'},
+'reverse pec deck':{alt:['Face Pulls'],tips:['Squeeze the rear delts throughout.','Pull with control, pause in the back.','Keep elbows slightly bent.'],prog:'Add +2.5 kg when 3×15 is solid.'},
+'barbell back squat':{alt:['Front Squat','Goblet Squat','Leg Press Machine'],tips:['Brace up top, bar on upper traps.','Sit down and back until hips pass parallel.','Drive the floor apart, stand tall.'],prog:'Add +2.5 kg per side when 5×5 is clean.'},
+'romanian deadlift':{alt:['Lying Hamstring Curl','Seated Hamstring Curl'],tips:['Soft knees, push hips back.','Lower the bar along the thighs until hamstrings are fully stretched.','Back flat, chest up.'],prog:'Add +2.5 kg per side when 4×8 is clean.'},
+'leg press machine':{alt:['Barbell Back Squat','Front Squat','Walking Lunge'],tips:['Feet shoulder-width on the platform.','Lower until knees are at 90°, don’t let your lower back round off.','Don’t lock knees hard at the top.'],prog:'Add +10 kg when 4×12 is solid.'},
+'seated hamstring curl':{alt:['Romanian Deadlift','Lying Hamstring Curl'],tips:['Hips into the pad, heels on the roller.','Curl the roller to the glutes.','Control the return — no slam.'],prog:'Add +5 kg when 4×12 is clean.'},
+'calf raises':{alt:[],tips:['Full stretch at the bottom, pause.','Rise up onto the balls of the feet.','Squeeze at the top for 1–2 seconds.'],prog:'Add +10 kg when 3×15 is easy.'},
+'front squat':{alt:['Barbell Back Squat','Goblet Squat'],tips:['Bar racked on front delts, elbows high.','Stay tall — don’t let elbows drop.','Depth: hips below parallel.'],prog:'Add +2.5 kg per side when 4×8 is clean.'},
+'goblet squat':{alt:['Barbell Back Squat','Walking Lunge'],tips:['Dumbbell at the chest, elbows inside knees.','Sit straight down, chest up.','Drive up through the whole foot.'],prog:'Add +2 kg when 3×15 is easy.'},
+'bulgarian split squat':{alt:['Walking Lunge','Goblet Squat'],tips:['Rear foot on the bench, torso slightly forward.','Lower until the front thigh is parallel.','Drive up through the front heel.'],prog:'Add +1 kg per hand when 3×10 is clean.'},
+'lying hamstring curl':{alt:['Seated Hamstring Curl','Romanian Deadlift'],tips:['Hips into the pad, heels on the roller.','Curl with the hamstrings, no swinging.','Control the negative.'],prog:'Add +5 kg when 4×12 is solid.'},
+'walking lunge':{alt:['Bulgarian Split Squat','Goblet Squat'],tips:['Long stride, back knee just off the floor.','Drive up and step the back foot through.','Keep the torso tall.'],prog:'Add +1 kg per hand when 3×12 per leg is easy.'},
+'incline smith machine press':{alt:['Incline Dumbbell Press','Dumbbell Bench Press'],tips:['Bench at 30–45°, feet planted.','Lower the bar to the upper chest.','Press up and slightly back along the track.'],prog:'Add +2.5 kg when 4×10 is clean.'},
+'neutral-grip lat pulldown':{alt:['Lat Pulldown (Wide Grip)','Close-Grip Lat Pulldown'],tips:['Narrow grip, pull to the upper chest.','Elbows down and back, chest up.','Control the return.'],prog:'Add +5 kg when 4×10 is solid.'},
+'standing db shoulder press':{alt:['Shoulder Press Machine','Arnold Press'],tips:['Brace, slight arch, dumbbells at ear height.','Press up until arms lock — no clang.','Keep the ribs down.'],prog:'Add +1 kg per hand when 4×10 is clean.'},
+'chest-supported db row':{alt:['Single-Arm Dumbbell Row','Plate-Loaded Seated Row'],tips:['Chest on the pad, back flat.','Pull the dumbbells to the lower ribs.','Squeeze, lower slowly.'],prog:'Add +1 kg when 3×12 is easy.'},
+'overhead cable tri ext':{alt:['Rope Cable Tricep Pushdowns','EZ Bar Skull Crusher'],tips:['Face away from the pulley, rope above the head.','Extend until arms are straight.','Keep elbows pointing up — don’t flare them out.'],prog:'Add +1.25 kg when 3×15 is clean.'},
+'incline db curls':{alt:['EZ-Bar Bicep Curls','Hammer Curl'],tips:['Bench at 45°, arms hanging, elbows behind you.','Curl without swinging, squeeze at the top.','The stretch at the bottom is the point.'],prog:'Add +1 kg when 3×12 is solid.'},
+'arnold press':{alt:['Standing DB Shoulder Press','Shoulder Press Machine'],tips:['Start palms facing you, rotate as you press.','Full rotation at the top.','Control the way down.'],prog:'Add +1 kg per hand when 3×10 is clean.'},
+'dumbbell lateral raise':{alt:['Cable Lateral Raises'],tips:['Slight elbow bend, lead with the elbows.','Raise to parallel — no shrug.','Lower slowly, 2–3 seconds.'],prog:'Add +1 kg when 3×15 is controlled.'},
+'cable tricep kickback':{alt:['Rope Cable Tricep Pushdowns','Overhead Cable Tri Ext'],tips:['Hinge forward, top arm braced on your thigh.','Extend the forearm fully, squeeze.','No elbow travel.'],prog:'Add +1.25 kg when 4×15 is easy.'},
+'incline dumbbell fly':{alt:['Incline Dumbbell Press'],tips:['Bench at 30°, slight elbow bend.','Open wide in a slow arc, chest stretch.','Squeeze together without clanging.'],prog:'Add weight only when 3×15 is clean with the stretch.'},
+'plank':{alt:['Side Plank','Dead Bug'],tips:['Elbows under shoulders, hips level.','Brace the abs, squeeze glutes.','Breathe steadily.'],prog:'Add 10–15 seconds each week.'},
+'hanging leg raise':{alt:['Dead Bug'],tips:['Hang from the bar, tuck the knees first.','Raise to parallel, control the way down.','No swinging — dead hang.'],prog:'Move to straight legs.'},
+'cable woodchop':{alt:[],tips:['High to low, rotate the whole torso.','Drive through the core, not the arms.','Control the return.'],prog:'Add +5 kg when 3×12 per side is clean.'},
+'dead bug':{alt:['Plank','Ab Wheel Rollout'],tips:['Lower back pressed into the floor.','Extend the opposite arm and leg.','Slow — no arching.'],prog:'Add tempo or a light band.'},
+'side plank':{alt:['Plank','Russian Twist'],tips:['Elbows stacked, hips high.','Body in a straight line.','Hold and breathe.'],prog:'Add 5–10 seconds per side weekly.'},
+'russian twist':{alt:['Cable Woodchop'],tips:['Sit, lean back slightly, feet lifted.','Rotate side to side, chest up.','Full range, no momentum.'],prog:'Add a plate once bodyweight is easy.'},
+'bicycle crunch':{alt:['Ab Wheel Rollout'],tips:['Elbow to opposite knee, long range.','Slow and controlled.','Lower back stays down.'],prog:'Add tempo or a pause.'},
+'ab wheel rollout':{alt:['Dead Bug','Plank'],tips:['Start on knees, neutral spine.','Roll out as far as you can control.','Pull back with the abs, not the arms.'],prog:'Extend the range each week.'},
+'mountain climbers':{alt:[],tips:['Strong plank, elbows under shoulders.','Drive knees fast but hips level.','Steady rhythm — no hip rock.'],prog:'Increase speed or duration.'}
+};
+function baseName(n){return (n||'').replace(/\s*[+&]\s*.*$/,'').trim();}
+function libOf(n){const k=baseName(n).toLowerCase();return LIB[k]||null;}
+function vidOf(n){return VIDS[baseName(n).toLowerCase()]||null;}
+const EXFOCUS={};
+Object.keys(DEFAULT_PROGRAM).forEach(f=>DEFAULT_PROGRAM[f].forEach(e=>{EXFOCUS[baseName(e.name).toLowerCase()]=f;}));
 
 function clone(o){return JSON.parse(JSON.stringify(o));}
 function loadState(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse(r):null; }catch(e){ return null; } }
@@ -143,7 +239,7 @@ function snapshotWork(f){
  return {focus:f, started:Date.now(),
   ex:(S.program[f]||[]).map(e=>{
    const prev=lastExData(f,e.name);
-   return {name:e.name, sets:e.sets, repsText:e.reps, rest:e.rest||90,
+   return {name:e.name, nSets:e.sets, repsText:e.reps, rest:e.rest||90,
     sets:Array.from({length:e.sets},(_,j)=>{
      if(prev){ const p=prev.sets[Math.min(j,prev.sets.length-1)]; return {w:p.w||'', r:'', done:false}; }
      return {w:e.weight||'', r:'', done:false};
@@ -177,7 +273,7 @@ function finishSession(){
  const exs=w.ex.filter(e=>e.sets.some(s=>s.done||(parseFloat(s.w)>0&&String(s.r).trim()!=='')))
    .map(e=>({name:e.name, sets:e.sets.filter(s=>s.done||(parseFloat(s.w)>0&&String(s.r).trim()!=='')).map(s=>({w:s.w||'', r:s.r||''}))}));
  if(!exs.length){ toast('Log at least one set first'); return; }
- S.sessions.push({date:Date.now(), focus:w.focus, ex:exs,
+ S.sessions.push({date:Date.now(), focus:w.focus, ex:exs, dur:Date.now()-w.started,
    cardio:w.cardio?{type:w.cardio.type, done:w.cardio.done, note:w.cardio.note||w.cardio.detail||''}:null});
  S.work=null; save();
  V={tab:'hist',hist:S.sessions.length-1,prog:null}; render(); toast('Session saved 💪');
@@ -217,7 +313,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg<br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -238,10 +334,11 @@ function homeView(){
 
 function sessionView(){
  const w=S.work; const f=FOCI.find(x=>x.id===w.focus);
- let h='<div class="topline"><div><h1 style="color:'+f.color+';margin:0">'+f.icon+' '+f.name+'</h1><div class="mut">started '+fmtTime(w.started)+'</div></div>'
-  +'<button class="sm danger" onclick="cancelWork()">✕</button></div>';
+ let h='<div class="topline"><div><h1 style="color:'+f.color+';margin:0">'+f.icon+' '+f.name+'</h1><div class="mut">started '+fmtTime(w.started)+' · ⏱ <span id="wtime">0:00</span></div></div>'
+ +'<button class="sm danger" onclick="cancelWork()">✕</button></div>';
  w.ex.forEach((e,i)=>{
-  h+='<div class="card"><div class="exname">'+esc(e.name)+'</div><div class="exmeta">target '+e.sets+'×'+esc(e.repsText)+' · rest '+(e.rest||90)+'s</div>';
+  h+='<div class="card"><div class="exname">'+esc(e.name)+'</div><div class="exmeta">target '+(e.nSets||e.sets)+'×'+esc(e.repsText)+' · rest '+(e.rest||90)+'s</div>'
+  +'<div class="exbtns"><button onclick="guide('+i+')">ℹ How to do</button><button onclick="swapModal('+i+')">⇄ Swap</button><button onclick="addSetAt('+i+')">+ Set</button></div>';
   e.sets.forEach((s,j)=>{
    h+='<div class="setrow'+(s.done?' isdone':'')+'"><input class="num" inputmode="decimal" placeholder="kg" value="'+esc(s.w)+'" oninput="setWAt('+i+','+j+',this.value)">'
     +'<input class="num" inputmode="numeric" placeholder="reps" value="'+esc(s.r)+'" oninput="setRAt('+i+','+j+',this.value)">'
@@ -249,6 +346,7 @@ function sessionView(){
   });
   h+='</div>';
  });
+ h+='<div class="card"><button class="primary" style="width:100%;min-height:48px" onclick="addExModal()">＋ Add exercise to this workout</button></div>';
  if(w.cardio){
   h+='<div class="card"><div class="row" style="justify-content:space-between"><div class="exname">🏃 Cardio</div>'
    +'<button class="sm '+(w.cardio.done?'good':'')+'" onclick="cardioToggle()">'+(w.cardio.done?'done ✓':'mark done')+'</button></div>'
@@ -273,14 +371,15 @@ function histListView(){
   const top=maxW(s);
   h+='<div class="card" onclick="openHist('+i+')" style="cursor:pointer">'
    +'<div class="row" style="justify-content:space-between"><span class="tag" style="background:'+f.color+'22;color:'+f.color+'">'+f.icon+' '+f.name+'</span>'
-   +'<span class="mut">'+fmtDate(s.date)+' · '+fmtTime(s.date)+'</span></div>'
+   +'<span class="mut">'+fmtDate(s.date)+' · '+fmtTime(s.date)+(s.dur?' · '+fmtDurShort(s.dur):'')+'</span></div>'
    +'<div class="mut" style="margin-top:6px;font-size:13.5px">'+top?('top lift '+top+'kg · '):''+sessionVolume(s)+'kg volume'+(s.cardio&&s.cardio.done?' · cardio ✓':'')+'</div></div>';
  });
  return h;
 }
 
 function histDetailView(i){
- const s=S.sessions[i]; const f=FOCI.find(x=>x.id===s.focus)||{name:s.focus,color:'#8b98a5',icon:''};
+ const s=S.sessions[i]; if(!s){ V.hist=null; return '<p class="mut">No session at that index.</p>'; }
+ const f=FOCI.find(x=>x.id===s.focus)||{name:s.focus,color:'#8b98a5',icon:''};
  const bests=exBests();
  let h='<div class="topline"><button class="sm" onclick="openHist(null)">←</button><div><h1 style="margin:0">'+f.icon+' '+f.name+' — '+fmtDate(s.date)+'</h1></div></div>';
  h+='<div class="card"><table><tr><th>Exercise</th><th>Sets (kg × reps)</th><th>Vol</th><th>e1RM</th></tr>';
@@ -396,6 +495,102 @@ function doPaste(){
  }catch(e){ toast('Could not read that: '+e.message); }
 }
 
+/* ============ v3: workout timer ============ */
+let wIv=null;
+function fmtDur(ms){let s=Math.floor(ms/1000);const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);s%=60;
+ return (h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(s).padStart(2,'0');}
+function fmtDurShort(ms){const m=Math.max(1,Math.round(ms/60000));return m<60?m+'m':Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m';}
+function tickW(){if(!S.work)return;const el=document.getElementById('wtime');if(el)el.textContent=fmtDur(Date.now()-S.work.started);}
+
+/* ============ v3: guide modal (write-up + video + swap) ============ */
+function openModal(html){document.getElementById('sheet').innerHTML=html;document.getElementById('modal').classList.add('on');}
+function closeModal(){document.getElementById('modal').classList.remove('on');}
+function guide(i){
+ const e=S.work.ex[i],L=libOf(e.name),vid=vidOf(e.name);
+ let h='<h3>'+esc(e.name)+'</h3><p class="mut" style="margin:0 0 6px">How to do it</p>';
+ if(vid)h+='<iframe class="gvid" src="https://www.youtube.com/embed/'+vid+'" title="'+esc(e.name)+'" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+ if(L){
+  h+='<b>Tips</b><ul>'+L.tips.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';
+  h+='<b>When to add weight</b><p class="mut" style="margin:6px 0 10px">'+esc(L.prog)+'</p>';
+  if(L.alt.length){h+='<b>Swap with (same focus)</b><div class="xbtns">';
+   L.alt.forEach(a=>h+='<button onclick="closeModal();doSwap('+i+',\''+esc(a)+'\')">'+esc(a)+'</button>');
+   h+='</div>';}
+ } else h+='<p class="mut">No guide on file for this custom exercise.</p>';
+ h+='<div class="xbtns"><button class="primary" onclick="closeModal()">Done</button></div>';
+ openModal(h);
+}
+function swapModal(i){
+ const e=S.work.ex[i],L=libOf(e.name),f=S.work.focus;
+ const pool=[...(L?L.alt:[]),
+  ...DEFAULT_PROGRAM[f].map(x=>baseName(x.name)),
+  ...Object.keys(DEFAULT_PROGRAM).filter(k=>k!==f).flatMap(k=>DEFAULT_PROGRAM[k].map(x=>baseName(x.name)))];
+ const uniq=[...new Set(pool.filter(n=>n!==baseName(e.name)))];
+ const same=uniq.filter(n=>EXFOCUS[n.toLowerCase()]===f);
+ const other=uniq.filter(n=>EXFOCUS[n.toLowerCase()]!==f);
+ let h='<h3>Swap '+esc(e.name)+'</h3><p class="mut" style="margin:0 0 8px">Same day first, then other days</p>';
+ [...same,...other].forEach(n=>h+='<button class="altrow" onclick="closeModal();doSwap('+i+',\''+esc(n)+'\')">'+esc(n)+'</button>');
+ h+='<input id="swapx" placeholder="or type a custom exercise" onkeydown="if(event.key===\'Enter\')swapCustom('+i+')">';
+ h+='<div class="xbtns"><button class="primary" onclick="swapCustom('+i+')">Use custom</button><button onclick="closeModal()">Cancel</button></div>';
+ openModal(h);
+}
+function swapCustom(i){
+ const v=document.getElementById('swapx').value.trim();
+ if(!v){toast('Type an exercise name');return;}
+ closeModal();doSwap(i,v);
+}
+function doSwap(i,name){
+ const w=S.work,e=w.ex[i];
+ const prev=lastExData(w.focus,name);
+ const n=e.sets.length;
+ e.name=name;
+ e.sets=Array.from({length:n},(_,j)=>({
+  w:prev&&prev.sets.length?(prev.sets[Math.min(j,prev.sets.length-1)].w||''):'',
+  r:'',done:false}));
+ save();render();toast('Swapped in '+name);
+}
+
+/* ============ v3: extra sets + extra exercises ============ */
+function addSetAt(i){
+ const e=S.work.ex[i];
+ const prev=lastExData(S.work.focus,e.name);
+ let w='';
+ if(prev&&prev.sets.length)w=prev.sets[Math.min(e.sets.length,prev.sets.length-1)].w||'';
+ else if(e.sets.length)w=e.sets[e.sets.length-1].w||'';
+ e.sets.push({w:w,r:'',done:false});
+ save();render();
+}
+function addExModal(){
+ const f=S.work.focus;
+ let h='<h3>Add exercise</h3><p class="mut" style="margin:0 0 8px">Joins this workout with 3 sets — adjust freely</p>';
+ h+='<input id="axq" placeholder="search…" oninput="addExRender(this.value)">';
+ h+='<div id="axlist"></div>';
+ h+='<input id="axc" placeholder="…or type a custom exercise" onkeydown="if(event.key===\'Enter\')addExCustom()">';
+ h+='<div class="xbtns"><button class="primary" onclick="addExCustom()">Add custom</button><button onclick="closeModal()">Cancel</button></div>';
+ openModal(h);
+ addExRender('');
+}
+function addExRender(q){
+ const f=S.work.focus;
+ const names=[...DEFAULT_PROGRAM[f].map(e=>baseName(e.name)),
+  ...Object.keys(DEFAULT_PROGRAM).filter(k=>k!==f).flatMap(k=>DEFAULT_PROGRAM[k].map(e=>baseName(e.name)))];
+ const uniq=[...new Set(names)].filter(n=>!q||n.toLowerCase().includes(q.toLowerCase()));
+ const el=document.getElementById('axlist');
+ if(el)el.innerHTML=uniq.map(n=>'<button class="altrow" onclick="addExPick(\''+esc(n)+'\')">'+esc(n)+'</button>').join('');
+}
+function addExPick(n){addLive(n);}
+function addExCustom(){
+ const v=document.getElementById('axc').value.trim();
+ if(!v){toast('Type an exercise name');return;}
+ addLive(v);
+}
+function addLive(name){
+ const f=S.work.focus;
+ const prev=lastExData(f,name);
+ S.work.ex.push({name:name, nSets:3, repsText:'10-12', rest:90,
+  sets:Array.from({length:3},(_,j)=>({w:prev&&prev.sets.length?(prev.sets[Math.min(j,prev.sets.length-1)].w||''):'',r:'',done:false}))});
+ closeModal();save();render();toast('Added '+name+' to this workout');
+}
+
 /* ---------- toast / render ---------- */
 let toastT=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
@@ -410,19 +605,36 @@ function render(){
  else h=programView();
  app.innerHTML=h;
  document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.tab));
+ if(S.work){ if(!wIv) wIv=setInterval(tickW,1000); tickW(); }
+ else if(wIv){ clearInterval(wIv); wIv=null; }
 }
 
 /* ---------- self-test (call from console / dev) ---------- */
 function selftest(){
+ let before='{"sessions":[]}';
  try{
-  const before=S.sessions.length;
+  before=JSON.stringify(S);
   S.work=snapshotWork('push');
   S.work.ex[0].sets[0].w='26'; S.work.ex[0].sets[0].r='8'; S.work.ex[0].sets[0].done=true;
   S.work.ex[1].sets[0].w='22'; S.work.ex[1].sets[0].r='10'; S.work.ex[1].sets[0].done=true;
+  // v3 checks: extra set, guide modal, swap, live add
+  const n0=S.work.ex.length;
+  addSetAt(0);
+  if(S.work.ex[0].sets.length!==4) throw new Error('addSetAt');
+  guide(0);
+  if(!document.getElementById('modal').classList.contains('on')) throw new Error('guide modal');
+  closeModal();
+  doSwap(0,'Dumbbell Bench Press');
+  if(S.work.ex[0].name!=='Dumbbell Bench Press') throw new Error('swap');
+  addLive('Tricep Dips');
+  if(S.work.ex.length!==n0+1) throw new Error('addLive');
+  S.work.ex[n0].sets[0]={w:'20',r:'10',done:true};
   save(); finishSession();
   const last=S.sessions[S.sessions.length-1];
-  return JSON.stringify({ok:true, added:S.sessions.length-before, focus:last.focus, ex:last.ex.length, vol:sessionVolume(last), errs:window.__errs});
- }catch(e){ return JSON.stringify({ok:false,err:String(e),errs:window.__errs}); }
+  const res=JSON.stringify({ok:true, added:S.sessions.length-(JSON.parse(before).sessions.length), focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), errs:window.__errs});
+  S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
+  return res;
+ }catch(e){ S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render(); return JSON.stringify({ok:false,err:String(e),errs:window.__errs}); }
 }
 
 render();
