@@ -375,7 +375,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.3</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.4</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -463,7 +463,7 @@ function histDetailView(i){
  h+='</table></div>';
  if(s.cardio){ h+='<div class="card"><b>🏃 Cardio</b> '+(s.cardio.done?' ✓':' (skipped)')+'<div class="mut" style="margin-top:3px">'+esc(cardioSummary(s.cardio))+(s.cardio.note?' — '+esc(s.cardio.note):'')+'</div></div>'; }
  const bestSets=(s.ex||[]).flatMap(e=>e.sets.map(st=>({w:parseFloat(st.w)||0})));
- h+='<div class="row" style="margin-top:14px"><button class="sm danger" onclick="delSession('+i+')">Delete session</button></div>';
+ h+='<div class="row" style="margin-top:14px"><button class="sm" onclick="exportSessionPdf('+i+')">⬇ Export to PDF</button><button class="sm danger" onclick="delSession('+i+')">Delete session</button></div>';
  return h;
 }
 function openHist(i){ V.hist=i; render(); }
@@ -503,6 +503,7 @@ function progView(){
 
 function programView(){
  let h='<h1>Program</h1><p class="sub">Edit your plan any time — new sessions use what\'s here.</p>';
+ h+='<div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="sm" onclick="exportProgramPdf()">⬇ Export program to PDF</button><span class="hint" style="margin:0">A clean printable sheet of your full plan — save it or share it outside the app.</span></div>';
  FOCI.forEach(f=>{
   h+='<div class="card"><h2 style="color:'+f.color+'">'+f.icon+' '+f.name+'</h2>';
   (S.program[f.id]||[]).forEach((e,i)=>{
@@ -768,6 +769,143 @@ function statsView(){
   return h;
 }
 
+/* ============ v3.4: PDF export (self-contained writer, no deps) ============ */
+function winansi(s){
+ const MAP={'\u00b7':0xb7,'\u00d7':0xd7,'\u2013':0x96,'\u2014':0x97,'\u2018':0x91,'\u2019':0x92,'\u201c':0x93,'\u201d':0x94,'\u00a0':0xa0,'\u2026':0x85,'\u2022':0x95};
+ const out=[];
+ for(const ch of String(s)){
+  const c=ch.codePointAt(0);
+  if(MAP[ch]!==undefined){ out.push(MAP[ch]); continue; }
+  if(c<0x20){ continue; } // drop control chars
+  if(c<0x100){ out.push(c); continue; }
+  // no WinAnsi mapping (emoji, etc.) -> drop
+ }
+ return out;
+}
+function pdfEsc(s){ return s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+function u8ToString(u8){ let s=''; for(let i=0;i<u8.length;i+=8192) s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192)); return s; }
+function pdfBytes(lines){
+ const W=595.28,H=841.89,L=48,T=56,B=56;
+ const pages=[]; let cur=[]; let y=H-T;
+ for(const it of lines){
+  const lh=it.s*1.3;
+  let yb=y-(it.sb||0)-lh;
+  if(yb<B){ pages.push(cur); cur=[]; y=H-T; yb=y-lh; }
+  cur.push({it,x:L+(it.i||0),y:yb}); y=yb;
+ }
+ if(cur.length)pages.push(cur); if(!pages.length)pages.push([]);
+ const n=pages.length;
+ const f1=3+2*n, f2=f1+1;
+ let doc='%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n';
+ const offs=[];
+ const addObj=(num,body)=>{ offs[num]=doc.length; doc+=num+' 0 obj\n'+body+'\nendobj\n'; };
+ addObj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+ addObj(2,'<< /Type /Pages /Kids ['+pages.map((_,i)=>(3+i)+' 0 R').join(' ')+'] /Count '+n+' >>');
+ pages.forEach((pg,i)=>{
+  const pno=3+i, cno=3+n+i;
+  let cs='';
+  pg.forEach(p=>{
+   let txt=''; for(const b of winansi(p.it.t)) txt+=String.fromCharCode(b);
+   const col=(p.it.c||[0,0,0]);
+   cs+='BT\n/'+p.it.f+' '+p.it.s+' Tf\n'+col[0]+' '+col[1]+' '+col[2]+' rg\n'+p.x.toFixed(2)+' '+p.y.toFixed(2)+' Td\n('+pdfEsc(txt)+') Tj\nET\n';
+  });
+  addObj(pno,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 '+f1+' 0 R /F2 '+f2+' 0 R >> >> /Contents '+cno+' 0 R >>');
+  addObj(cno,'<< /Length '+cs.length+' >>\nstream\n'+cs+'endstream');
+ });
+ addObj(f1,'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+ addObj(f2,'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+ const total=3+2*n+1;
+ const xrefStart=doc.length;
+ let xref='xref\n0 '+total+'\n0000000000 65535 f \n';
+ for(let i=1;i<total;i++){ xref+=String(offs[i]||0).padStart(10,'0')+' 00000 n \n'; }
+ doc+=xref+'trailer\n<< /Size '+total+' /Root 1 0 R >>\nstartxref\n'+xrefStart+'\n%%EOF';
+ const out=new Uint8Array(doc.length); for(let i=0;i<doc.length;i++)out[i]=doc.charCodeAt(i)&0xff;
+ return out;
+}
+function pdfValidate(u8){
+ const t=u8ToString(u8);
+ if(t.slice(0,5)!=='%PDF-')return 'bad header';
+ if(t.slice(-5)!=='%%EOF')return 'no EOF';
+ const m=/startxref\s+(\d+)/.exec(t); if(!m)return 'no startxref';
+ const off=+m[1]; if(t.slice(off,off+4)!=='xref')return 'xref offset bad';
+ const seg=t.slice(off+5).replace(/^xref\n/,'');
+ const linesArr=seg.split('\n');
+ const n=+linesArr[0].split(' ')[1];
+ for(let i=1;i<n;i++){
+  const line=linesArr[i+1]; if(!line)return 'xref truncated'; // entry i sits at index i+1 (index 1 is the obj-0 free entry)
+  const o=+line.slice(0,10);
+  if(t.slice(o,o+7)!==(i+' 0 obj'))return 'obj '+i+' offset bad';
+ }
+ return null;
+}
+function programPdfLines(){
+ const L=[]; const mut=[0.35,0.4,0.45];
+ const today=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+ L.push({t:'PPL+ Training Program',f:'F2',s:20});
+ L.push({t:'Generated '+today+'  ·  PPL-Tracker',f:'F1',s:10,sb:3,c:mut});
+ L.push({t:'Mon Push · Tue Pull · Thu Legs · Fri Upper · Core any day',f:'F1',s:10,sb:2,c:mut});
+ L.push({t:'',f:'F1',s:6,sb:6});
+ FOCI.forEach(f=>{
+  const exs=S.program[f.id]||[];
+  if(!exs.length)return;
+  L.push({t:f.name.toUpperCase(),f:'F2',s:13,sb:10,c:[0.31,0.55,1]});
+  L.push({t:'',f:'F1',s:4,sb:2});
+  exs.forEach(e=>{
+   const meta=[(e.sets?e.sets+'×'+e.reps:''),(e.weight?e.weight+' kg':''),(e.rest?'rest '+e.rest+'s':'')].filter(Boolean).join('  ·  ');
+   L.push({t:e.name,f:'F2',s:11,sb:4});
+   if(meta)L.push({t:meta,f:'F1',s:9.5,i:12,sb:1,c:mut});
+  });
+  if(S.cardio[f.id])L.push({t:'Cardio: '+cardioSummary(S.cardio[f.id]),f:'F1',s:9.5,i:12,sb:6,c:mut});
+ });
+ return L;
+}
+function sessionPdfLines(i){
+ const s=S.sessions[i]; if(!s)return [];
+ const f=FOCI.find(x=>x.id===s.focus)||{name:s.focus};
+ const L=[]; const mut=[0.35,0.4,0.45];
+ L.push({t:f.name+' — '+fmtDate(s.date),f:'F2',s:18});
+ const bits=[fmtTime(s.date)];
+ if(s.dur)bits.push(fmtDurShort(s.dur)+' duration');
+ bits.push(sessionVolume(s)+' kg volume');
+ const top=maxW(s); if(top)bits.push('top lift '+top+' kg');
+ L.push({t:bits.join('  ·  '),f:'F1',s:10,sb:3,c:mut});
+ L.push({t:'',f:'F1',s:6,sb:6});
+ (s.ex||[]).forEach(e=>{
+  L.push({t:e.name,f:'F2',s:12,sb:8});
+  let mw=0,me=0;
+  (e.sets||[]).forEach(st=>{
+   const w=parseFloat(st.w)||0, r=parseInt(st.r,10)||0;
+   if(w>mw)mw=w; const e1=e1rm(w,r); if(e1>me)me=e1;
+   L.push({t:(st.w||'—')+' kg × '+(st.r||'—')+' reps',f:'F1',s:9.5,i:14,sb:1.5,c:[0.2,0.25,0.3]});
+  });
+  if(me)L.push({t:'best '+mw+' kg · e1RM '+me,f:'F1',s:9,i:14,sb:3,c:mut});
+ });
+ if(s.cardio){
+  L.push({t:'Cardio: '+cardioSummary(s.cardio)+(s.cardio.done?'  (done)':'  (skipped)'),f:'F1',s:9.5,sb:8,c:mut});
+  if(s.cardio.note)L.push({t:'Note: '+s.cardio.note,f:'F1',s:9,i:14,sb:1,c:[0.5,0.55,0.6]});
+ }
+ return L;
+}
+function downloadBlob(bytes,name){
+ const blob=new Blob([bytes],{type:'application/pdf'});
+ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function exportProgramPdf(){
+ const lines=programPdfLines();
+ if(!lines.length){ toast('Nothing to export'); return; }
+ downloadBlob(pdfBytes(lines),'ppl-program-'+new Date().toISOString().slice(0,10)+'.pdf');
+ toast('Program PDF exported');
+}
+function exportSessionPdf(i){
+ const s=S.sessions[i]; if(!s)return;
+ const lines=sessionPdfLines(i);
+ if(!lines.length){ toast('Nothing to export'); return; }
+ const f=FOCI.find(x=>x.id===s.focus);
+ downloadBlob(pdfBytes(lines),'ppl-'+(f?f.id:s.focus)+'-'+new Date(s.date).toISOString().slice(0,10)+'.pdf');
+ toast('Session PDF exported');
+}
+
 /* ---------- toast / render ---------- */
 let toastT=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
@@ -837,7 +975,14 @@ function selftest(){
   if(S.program.legs.length!==legsBefore+1||S.program.legs[S.program.legs.length-1].name!=='Hip Thrust') throw new Error('addLibToProgram');
   addLibToProgram('Hip Thrust','legs');
   if(S.program.legs.length!==legsBefore+1) throw new Error('addLibToProgram dedupe');
-  const res=JSON.stringify({ok:true, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, errs:window.__errs});
+  // v3.4 checks: PDF export (self-contained writer)
+  const pl=programPdfLines(); if(!pl.length) throw new Error('programPdfLines empty');
+  const pbytes=pdfBytes(pl); const perr=pdfValidate(pbytes); if(perr) throw new Error('program pdf: '+perr);
+  if(pbytes.length<1500) throw new Error('program pdf too small');
+  const slines=sessionPdfLines(S.sessions.length-1); if(!slines.length) throw new Error('sessionPdfLines empty');
+  const sbytes=pdfBytes(slines); const serr=pdfValidate(sbytes); if(serr) throw new Error('session pdf: '+serr);
+  const ptxt=u8ToString(pbytes); if(!ptxt.includes('Tj')) throw new Error('pdf has no text ops');
+  const res=JSON.stringify({ok:true, pdf:{prog:pbytes.length,sess:sbytes.length}, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, errs:window.__errs});
   S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
   return res;
  }catch(e){ S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render(); return JSON.stringify({ok:false,err:String(e),errs:window.__errs}); }

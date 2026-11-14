@@ -10,6 +10,7 @@
 - **Update this file before committing the feature** (fill "In progress" into "Shipped", note anything deferred).
 
 ## Shipped
+- v3.4 — PDF export: self-contained writer (zero deps). "⬇ Export program to PDF" (plan tab) and "⬇ Export to PDF" per past session. Multi-page A4, Helvetica/WinAnsi, real xref table; in-app `pdfValidate` selftest (validator off-by-one found via selftest, fixed). Verified: node xref/stream-length checks + text decode (71 text ops, 2 pages, all exercises present).
 - v3.3 — Exercise Library: browse all swappable moves by focus (video + how-to), add to any day; EXLIB single source of truth (50+ moves); swap modal redesigned (same focus first, per-move how-to preview).
 - v3.2 — Stats tab: streaks (current/best weeks), total volume & gym time, this-week summary, 8-week volume chart, day-of-week chart (plan days highlighted), per-focus table.
 - v3.1 — Structured cardio logging: machine select, time, per-machine metrics.
