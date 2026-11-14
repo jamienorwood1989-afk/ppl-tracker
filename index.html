@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0b0f14">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PPL+">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>PPL+ Tracker</title>
 <style>
 :root{--bg:#0b0f14;--card:#131a22;--card2:#1a2430;--tx:#e6edf3;--mut:#8b98a5;--line:#233245;--acc:#4f8cff;--good:#34d399;--bad:#f87171}
@@ -88,6 +93,12 @@ th{color:var(--mut);font-size:12px;font-weight:600}
 <script>
 'use strict';
 window.__errs=[]; window.onerror=function(m){window.__errs.push(String(m));};
+
+/* v3.5: PWA — register the service worker for offline + install (https/localhost only;
+   silently skipped when opened from file://, e.g. the iCloud copy). */
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 
 const LS='ppltracker.v2';
 const FOCI=[
@@ -375,7 +386,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.4</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.5</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -982,7 +993,17 @@ function selftest(){
   const slines=sessionPdfLines(S.sessions.length-1); if(!slines.length) throw new Error('sessionPdfLines empty');
   const sbytes=pdfBytes(slines); const serr=pdfValidate(sbytes); if(serr) throw new Error('session pdf: '+serr);
   const ptxt=u8ToString(pbytes); if(!ptxt.includes('Tj')) throw new Error('pdf has no text ops');
-  const res=JSON.stringify({ok:true, pdf:{prog:pbytes.length,sess:sbytes.length}, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, errs:window.__errs});
+  // v3.5 checks: PWA wiring (manifest links + sw.js/manifest.json served)
+  if(!document.querySelector('link[rel="manifest"]')) throw new Error('manifest link missing');
+  if(!document.querySelector('link[rel="apple-touch-icon"]')) throw new Error('apple-touch-icon missing');
+  let pwa='skipped(file://)';
+  if(location.protocol==='https:'||location.hostname==='localhost'){
+    const x=new XMLHttpRequest(); x.open('GET','sw.js',false); x.send(); if(x.status!==200) throw new Error('sw.js HTTP '+x.status);
+    const xm=new XMLHttpRequest(); xm.open('GET','manifest.json',false); xm.send(); if(xm.status!==200) throw new Error('manifest HTTP '+xm.status);
+    const mf=JSON.parse(xm.responseText); if(!mf.icons||!mf.start_url) throw new Error('manifest malformed');
+    pwa='ok';
+  }
+  const res=JSON.stringify({ok:true, pwa:pwa, pdf:{prog:pbytes.length,sess:sbytes.length}, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, errs:window.__errs});
   S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
   return res;
  }catch(e){ S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render(); return JSON.stringify({ok:false,err:String(e),errs:window.__errs}); }
