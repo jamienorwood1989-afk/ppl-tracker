@@ -153,6 +153,14 @@ const VIDS={
 'bicycle crunch':'7hTRt_FCB0k','ab wheel rollout':'PK4n7qJpOhM',
 'mountain climbers':'14-XoPdnzlI'
 };
+/* v3.3: additional library videos (verified via YouTube oEmbed 2026-11-14) */
+Object.assign(VIDS,{
+'close-grip bench press':'a2G3IdaTcPU','straight-arm lat pulldown':'CLlpzP02cgs',
+'hip thrust':'URXoPVGbd3o','leg extension':'_0yqJNZZiLg',
+'pallof press':'Te5VAYXy0wQ','pull-up':'snKAb96zHhI',
+'barbell overhead tricep extension':'QxFHyf3sDsA','incline barbell press':'0u4JfFjvp3E',
+'pec deck machine':'hZ0CGRaKwbQ','v-up':'wRCgPeligF4'
+});
 
 /* ============ v3: exercise guides + alternatives ============ */
 const LIB={
@@ -204,13 +212,43 @@ const LIB={
 'russian twist':{alt:['Cable Woodchop'],tips:['Sit, lean back slightly, feet lifted.','Rotate side to side, chest up.','Full range, no momentum.'],prog:'Add a plate once bodyweight is easy.'},
 'bicycle crunch':{alt:['Ab Wheel Rollout'],tips:['Elbow to opposite knee, long range.','Slow and controlled.','Lower back stays down.'],prog:'Add tempo or a pause.'},
 'ab wheel rollout':{alt:['Dead Bug','Plank'],tips:['Start on knees, neutral spine.','Roll out as far as you can control.','Pull back with the abs, not the arms.'],prog:'Extend the range each week.'},
-'mountain climbers':{alt:[],tips:['Strong plank, elbows under shoulders.','Drive knees fast but hips level.','Steady rhythm — no hip rock.'],prog:'Increase speed or duration.'}
+'mountain climbers':{alt:[],tips:['Strong plank, elbows under shoulders.','Drive knees fast but hips level.','Steady rhythm — no hip rock.'],prog:'Increase speed or duration.'},
+/* v3.3: expanded swap-in library (video + how-to each) */
+'close-grip bench press':{alt:['Flat Barbell Bench Press','Rope Cable Tricep Pushdowns','Barbell Overhead Tricep Extension'],tips:['Grip about shoulder width — not narrower.','Elbows tucked to your ribs the whole rep.','Lower to the chest, press up over your torso.'],prog:'Add +2.5 kg per side when 4×8 is clean.'},
+'straight-arm lat pulldown':{alt:['Lat Pulldown (Wide Grip)','Close-Grip Lat Pulldown'],tips:['Slight hinge, arms straight, small elbow bend.','Pull the bar down in an arc to your thighs.','Drive with the lats, shoulders down — no shrug.'],prog:'Add +2.5 kg when 3×15 is controlled.'},
+'pull-up':{alt:['Assisted Pull-Up','Lat Pulldown (Wide Grip)'],tips:['Start from a dead hang, body in a hollow.','Pull to the bar, chin over it, chest up.','Lower under control — no dropping.'],prog:'Add a rep, then move to weighted pull-ups.'},
+'pec deck machine':{alt:['Incline Dumbbell Fly','Flat Barbell Bench Press'],tips:['Seat so the pads meet at mid-chest.','Small elbow bend, chest up, press in.','Squeeze the chest, lower slowly.'],prog:'Add +5 kg when 3×15 is clean with the squeeze.'},
+'incline barbell press':{alt:['Incline Dumbbell Press','Flat Barbell Bench Press'],tips:['Bench at 30–45°, grip just outside shoulder width.','Lower the bar to the upper chest.','Press up and back, feet planted.'],prog:'Add +2.5 kg per side when 4×8 is clean.'},
+'barbell overhead tricep extension':{alt:['Rope Cable Tricep Pushdowns','Overhead Cable Tri Ext'],tips:['Narrow overhand grip, elbows high.','Lower the bar behind the head, upper arms still.','Extend fully — keep the ribs down.'],prog:'Add +2.5 kg per side when 4×10 is clean.'},
+'leg extension':{alt:['Leg Press Machine','Barbell Back Squat'],tips:['Seat so your knee lines up with the pivot.','Extend smoothly, don’t crash the stack.','Pause at the top, lower slowly.'],prog:'Add +5 kg when 4×15 is controlled.'},
+'hip thrust':{alt:['Goblet Squat','Barbell Back Squat'],tips:['Upper back on the bench, bar across the hips.','Feet flat, shins near vertical at the top.','Squeeze the glutes — don’t arch the low back.'],prog:'Add +2.5 kg per side when 4×12 is clean.'},
+'pallof press':{alt:['Cable Woodchop','Dead Bug'],tips:['Stand side-on to the cable at chest height.','Press straight out, resist the twist.','Hips and shoulders stay square the whole rep.'],prog:'Add +2.5 kg when 3×12 per side is solid.'},
+'v-up':{alt:['Bicycle Crunch','Hanging Leg Raise'],tips:['Lie flat, arms overhead, legs long.','Lift arms and legs together into a V.','Touch your toes, lower slowly — no jerking.'],prog:'Add reps, then slow the tempo.'}
 };
 function baseName(n){return (n||'').replace(/\s*[+&]\s*.*$/,'').trim();}
 function libOf(n){const k=baseName(n).toLowerCase();return LIB[k]||null;}
 function vidOf(n){return VIDS[baseName(n).toLowerCase()]||null;}
+/* v3.3: full exercise library — every swappable exercise + its focus (single source of truth) */
+const EXLIB=(function(){
+ const raw=[];
+ Object.keys(DEFAULT_PROGRAM).forEach(f=>DEFAULT_PROGRAM[f].forEach(e=>raw.push({name:baseName(e.name),focus:f})));
+ [['Close-Grip Bench Press','push'],['Incline Barbell Press','push'],['Pec Deck Machine','push'],
+  ['Dumbbell Bench Press','push'],['Machine Chest Press','push'],['Weighted Push-Up','push'],
+  ['Tricep Dips','push'],['EZ Bar Skull Crusher','push'],['Barbell Overhead Tricep Extension','push'],
+  ['Arnold Press','push'],['Dumbbell Lateral Raise','push'],['Cable Tricep Kickback','push'],['Incline Dumbbell Fly','push'],
+  ['Straight-Arm Lat Pulldown','pull'],['Pull-Up','pull'],['Assisted Pull-Up','pull'],
+  ['Close-Grip Lat Pulldown','pull'],['Barbell Row','pull'],['Hammer Curl','pull'],['Reverse Pec Deck','pull'],
+  ['Leg Extension','legs'],['Hip Thrust','legs'],['Front Squat','legs'],['Goblet Squat','legs'],
+  ['Bulgarian Split Squat','legs'],['Lying Hamstring Curl','legs'],['Walking Lunge','legs'],
+  ['Pallof Press','core'],['V-Up','core'],['Russian Twist','core'],['Bicycle Crunch','core'],
+  ['Ab Wheel Rollout','core'],['Mountain Climbers','core']
+ ].forEach(x=>raw.push({name:x[0],focus:x[1]}));
+ const seen={},out=[];
+ raw.forEach(x=>{const k=baseName(x.name).toLowerCase();if(!seen[k]){seen[k]=1;out.push(x);}});
+ return out;
+})();
 const EXFOCUS={};
-Object.keys(DEFAULT_PROGRAM).forEach(f=>DEFAULT_PROGRAM[f].forEach(e=>{EXFOCUS[baseName(e.name).toLowerCase()]=f;}));
+EXLIB.forEach(x=>{EXFOCUS[baseName(x.name).toLowerCase()]=x.focus;});
 
 function clone(o){return JSON.parse(JSON.stringify(o));}
 function loadState(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse(r):null; }catch(e){ return null; } }
@@ -337,7 +375,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.2</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.3</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -485,12 +523,25 @@ function programView(){
    +'<input style="width:70px" inputmode="decimal" placeholder="min" value="'+esc(S.cardio[f.id]?S.cardio[f.id].mins||'':'')+'" oninput="setCardio(\''+f.id+'\',\'mins\',this.value)">'
    +'</div><button class="sm" style="margin-top:7px" onclick="toggleCardio(\''+f.id+'\')">'+(S.cardio[f.id]?'remove cardio':'add cardio')+'</button></div></div>';
  });
+ /* v3.3: Exercise Library — browse every swappable move (video + how-to), or add to a day */
+ h+='<div class="card"><h2>📚 Exercise Library</h2><p class="sub">Every move you can swap in. 📖 = video + how-to · + = add to that day.</p>';
+ FOCI.forEach(f=>{
+  const items=EXLIB.filter(x=>x.focus===f.id);
+  if(!items.length)return;
+  h+='<div class="card2" style="margin-top:8px"><b style="color:'+f.color+'">'+f.icon+' '+f.name+' <span class="mut">('+items.length+')</span></b><div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">';
+  items.forEach(x=>{h+='<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:14px">'+esc(x.name)+'</span><button class="sm" style="flex:0 0 auto" onclick="guideLib(\''+esc(x.name)+'\')">📖</button><button class="sm" style="flex:0 0 auto" onclick="addLibToProgram(\''+esc(x.name)+'\',\''+f.id+'\')">+</button></div>';});
+  h+='</div></div>';
+ });
+ h+='</div>';
  h+='<div class="card dangerzone"><button class="sm" onclick="resetProg()">Reset program to defaults</button><button class="sm danger" onclick="eraseAll()">Erase ALL data</button></div>';
  return h;
 }
 function setP(f,i,k,v){ const e=S.program[f][i]; if(!e)return;
  if(k==='sets'||k==='rest'){ e[k]=Math.max(1,parseInt(v,10)||1); } else e[k]=v; save(); }
 function addEx(f){ S.program[f].push({name:'New exercise',sets:3,reps:'10',weight:'',rest:90}); save(); render(); }
+function addLibToProgram(name,focus){ if(!S.program[focus])return;
+ if(S.program[focus].some(x=>baseName(x.name).toLowerCase()===baseName(name).toLowerCase())){ toast(name+' is already on '+focus); return; }
+ S.program[focus].push({name:name,sets:3,reps:'10',weight:'',rest:90}); save(); render(); toast('Added '+name); }
 function delEx(f,i){ if(!confirm('Remove '+S.program[f][i].name+'?'))return; S.program[f].splice(i,1); save(); render(); }
 function moveEx(f,i,d){ const a=S.program[f]; const j=i+d; if(j<0||j>=a.length)return; [a[i],a[j]]=[a[j],a[i]]; save(); render(); }
 function setCardio(f,k,v){ if(!S.cardio[f]) S.cardio[f]={machine:'',mins:''}; S.cardio[f][k]=v; save(); }
@@ -539,32 +590,45 @@ function tickW(){if(!S.work)return;const el=document.getElementById('wtime');if(
 /* ============ v3: guide modal (write-up + video + swap) ============ */
 function openModal(html){document.getElementById('sheet').innerHTML=html;document.getElementById('modal').classList.add('on');}
 function closeModal(){document.getElementById('modal').classList.remove('on');}
-function guide(i){
- const e=S.work.ex[i],L=libOf(e.name),vid=vidOf(e.name);
- let h='<h3>'+esc(e.name)+'</h3><p class="mut" style="margin:0 0 6px">How to do it</p>';
- if(vid)h+='<iframe class="gvid" src="https://www.youtube.com/embed/'+vid+'" title="'+esc(e.name)+'" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+function guideCore(name){
+ const L=libOf(name),vid=vidOf(name);
+ let h='';
+ if(vid)h+='<iframe class="gvid" src="https://www.youtube.com/embed/'+vid+'" title="'+esc(name)+'" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
  if(L){
   h+='<b>Tips</b><ul>'+L.tips.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';
   h+='<b>When to add weight</b><p class="mut" style="margin:6px 0 10px">'+esc(L.prog)+'</p>';
-  if(L.alt.length){h+='<b>Swap with (same focus)</b><div class="xbtns">';
-   L.alt.forEach(a=>h+='<button onclick="closeModal();doSwap('+i+',\''+esc(a)+'\')">'+esc(a)+'</button>');
-   h+='</div>';}
- } else h+='<p class="mut">No guide on file for this custom exercise.</p>';
+ } else h+='<p class="mut">No guide on file for this exercise.</p>';
+ return h;
+}
+function guide(i){
+ const e=S.work.ex[i],L=libOf(e.name);
+ let h='<h3>'+esc(e.name)+'</h3><p class="mut" style="margin:0 0 6px">How to do it</p>'+guideCore(e.name);
+ if(L&&L.alt.length){h+='<b>Swap with (same focus)</b><div class="xbtns">';
+  L.alt.forEach(a=>h+='<button onclick="closeModal();doSwap('+i+',\''+esc(a)+'\')">'+esc(a)+'</button>');
+  h+='</div>';}
  h+='<div class="xbtns"><button class="primary" onclick="closeModal()">Done</button></div>';
  openModal(h);
 }
+function guideLib(name){
+ let h='<h3>'+esc(name)+'</h3><p class="mut" style="margin:0 0 6px">How to do it</p>'+guideCore(name);
+ const L=libOf(name);
+ if(L&&L.alt.length){h+='<b>Similar moves</b><div class="xbtns" style="flex-wrap:wrap;gap:6px;margin-top:6px">';
+  L.alt.forEach(a=>h+='<button onclick="guideLib(\''+esc(a)+'\')">'+esc(a)+'</button>');
+  h+='</div>';}
+ h+='<div class="xbtns" style="margin-top:12px"><button class="primary" onclick="closeModal()">Done</button></div>';
+ openModal(h);
+}
 function swapModal(i){
- const e=S.work.ex[i],L=libOf(e.name),f=S.work.focus;
- const pool=[...(L?L.alt:[]),
-  ...DEFAULT_PROGRAM[f].map(x=>baseName(x.name)),
-  ...Object.keys(DEFAULT_PROGRAM).filter(k=>k!==f).flatMap(k=>DEFAULT_PROGRAM[k].map(x=>baseName(x.name)))];
- const uniq=[...new Set(pool.filter(n=>n!==baseName(e.name)))];
- const same=uniq.filter(n=>EXFOCUS[n.toLowerCase()]===f);
- const other=uniq.filter(n=>EXFOCUS[n.toLowerCase()]!==f);
- let h='<h3>Swap '+esc(e.name)+'</h3><p class="mut" style="margin:0 0 8px">Same day first, then other days</p>';
- [...same,...other].forEach(n=>h+='<button class="altrow" onclick="closeModal();doSwap('+i+',\''+esc(n)+'\')">'+esc(n)+'</button>');
+ const e=S.work.ex[i],f=S.work.focus,cur=baseName(e.name).toLowerCase();
+ const same=EXLIB.filter(x=>x.focus===f&&baseName(x.name).toLowerCase()!==cur);
+ const other=EXLIB.filter(x=>x.focus!==f&&baseName(x.name).toLowerCase()!==cur);
+ const row=(x,ii)=>'<div class="altrow" style="display:flex;align-items:center;gap:8px"><button style="flex:1" onclick="closeModal();doSwap('+ii+',\''+esc(x.name)+'\')">'+esc(x.name)+'</button><button class="sm" style="flex:0 0 auto" title="Watch how-to" onclick="closeModal();guideLib(\''+esc(x.name)+'\')">📖</button></div>';
+ let h='<h3>Swap '+esc(e.name)+'</h3><p class="mut" style="margin:0 0 8px">Tap a move to swap it in · 📖 to watch the how-to first</p>';
+ h+='<b style="color:var(--acc)">Same focus</b>';
+ same.forEach(x=>h+=row(x,i));
+ if(other.length){h+='<b style="color:var(--mut);display:block;margin-top:10px">Other focus</b>';other.forEach(x=>h+=row(x,i));}
  h+='<input id="swapx" placeholder="or type a custom exercise" onkeydown="if(event.key===\'Enter\')swapCustom('+i+')">';
- h+='<div class="xbtns"><button class="primary" onclick="swapCustom('+i+')">Use custom</button><button onclick="closeModal()">Cancel</button></div>';
+ h+='<div class="xbtns" style="margin-top:10px"><button class="primary" onclick="swapCustom('+i+')">Use custom</button><button onclick="closeModal()">Cancel</button></div>';
  openModal(h);
 }
 function swapCustom(i){
@@ -755,6 +819,24 @@ function selftest(){
   const st=weekStreaks(); if(!(st.cur>=1&&st.best>=1)) throw new Error('weekStreaks');
   const bv=weeklyVolume(8); if(bv.length!==8||bv[bv.length-1].count<1) throw new Error('weeklyVolume');
   const bd=byDay(); if(bd.length!==7||bd.reduce((a,c)=>a+c,0)!==bc+1) throw new Error('byDay');
+  // v3.3 checks: expanded swap-in library (video + how-to each)
+  if(EXLIB.length<50) throw new Error('EXLIB count '+EXLIB.length);
+  if(EXLIB.filter(x=>x.focus==='push').length<15) throw new Error('push opts');
+  if(!vidOf('Hip Thrust')||!vidOf('Pull-Up')||!vidOf('Close-Grip Bench Press')||!vidOf('V-Up')) throw new Error('new vids');
+  if(!libOf('Pallof Press')||!libOf('Leg Extension')) throw new Error('new guides');
+  guideLib('Hip Thrust');
+  if(!document.getElementById('modal').classList.contains('on')) throw new Error('guideLib modal');
+  if(!document.querySelector('#sheet iframe')) throw new Error('guideLib video embed');
+  closeModal();
+  S.work=snapshotWork('push'); // swapModal is a workout-screen feature — needs an active work
+  swapModal(0);
+  if(!document.getElementById('sheet').textContent.includes('Same focus')) throw new Error('swapModal same-focus');
+  closeModal();
+  const legsBefore=S.program.legs.length;
+  addLibToProgram('Hip Thrust','legs');
+  if(S.program.legs.length!==legsBefore+1||S.program.legs[S.program.legs.length-1].name!=='Hip Thrust') throw new Error('addLibToProgram');
+  addLibToProgram('Hip Thrust','legs');
+  if(S.program.legs.length!==legsBefore+1) throw new Error('addLibToProgram dedupe');
   const res=JSON.stringify({ok:true, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, errs:window.__errs});
   S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
   return res;
