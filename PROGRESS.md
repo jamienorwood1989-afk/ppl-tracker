@@ -2,6 +2,9 @@
 
 **Read this first when starting any work on the app. Update it at the END of every work session and commit it with the feature.**
 
+## North star (user-stated, 2026-11-14)
+Feature-rich, free: the app must do everything Jamie wants it to do with **$0 total cost** — no app-store purchases, no subscriptions. Everything stays self-hosted (GitHub Pages + iCloud copy + PWA install on phone). Every feature/sync decision is judged against that: free-tier or $0 only, no passwords where avoidable, partner-simple.
+
 ## Ground rules (do not lose these)
 - Single-file app: all APP code lives in `index.html`. Since v3.5 it is a **PWA**, so the repo also carries a small PWA shell: `manifest.json`, `sw.js`, `icons/{icon-192,icon-512,apple-touch-icon}.png`. The app itself never moves out of `index.html`.
 - Publish pipeline: edit `index.html` → `node --check` extracted script **and** `node --check sw.js` → browser selftest (now reports `pwa:"ok"`) → `git add/commit/push` → GitHub Pages (~1–2 min) → sync to iCloud (see below) → verify sha256 match on the main file.
