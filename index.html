@@ -12,7 +12,8 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>PPL+ Tracker</title>
 <style>
-:root{--bg:#0b0f14;--card:#131a22;--card2:#1a2430;--tx:#e6edf3;--mut:#8b98a5;--line:#233245;--acc:#4f8cff;--good:#34d399;--bad:#f87171}
+:root{--bg:#0b0f14;--card:#131a22;--card2:#1a2430;--tx:#e6edf3;--mut:#8b98a5;--line:#233245;--acc:#4f8cff;--good:#34d399;--bad:#f87171;--inp:#0e151d;--nav:#0d141d;--toastbg:#1c2a3b;--hintbg:#101a28;--warnbg:#171307;--warntx:#e0b34e;--warnline:#8a6d2f;--onacc:#fff;--chartdot:#0b0f14}
+html.themed-light{--bg:#f2f4f7;--card:#ffffff;--card2:#eef1f5;--tx:#17222e;--mut:#5c6b7a;--line:#d7dee6;--acc:#2f6fed;--good:#0f9d6a;--bad:#e5484d;--inp:#ffffff;--nav:#ffffff;--toastbg:#1f2c3a;--hintbg:#eef2f6;--warnbg:#fff6e0;--warntx:#8a6d2f;--warnline:#e0b34e;--onacc:#fff;--chartdot:#ffffff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
 body{background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;padding-bottom:78px}
@@ -26,11 +27,11 @@ h2{font-size:15px;margin:0 0 8px;color:var(--tx);letter-spacing:.3px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 button{font:inherit;color:var(--tx);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;min-height:44px}
 button:active{transform:scale(.98)}
-button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+button.primary{background:var(--acc);border-color:var(--acc);color:var(--onacc);font-weight:600}
 button.good{background:var(--good);border-color:var(--good);color:#06281c;font-weight:700}
 button.danger{background:transparent;border-color:var(--bad);color:var(--bad)}
 button.sm{padding:6px 10px;min-height:36px;font-size:14px}
-input,select{font:inherit;color:var(--tx);background:#0e151d;border:1px solid var(--line);border-radius:9px;padding:9px 10px;width:100%;min-height:44px}
+input,select{font:inherit;color:var(--tx);background:var(--inp);border:1px solid var(--line);border-radius:9px;padding:9px 10px;width:100%;min-height:44px}
 input:focus,select:focus{outline:none;border-color:var(--acc)}
 input.num{text-align:center;font-variant-numeric:tabular-nums}
 .mut{color:var(--mut);font-size:13px}
@@ -50,18 +51,18 @@ input.num{text-align:center;font-variant-numeric:tabular-nums}
 table{width:100%;border-collapse:collapse;font-size:14px}
 td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--mut);font-size:12px;font-weight:600}
-.nav{position:fixed;bottom:0;left:0;right:0;background:#0d141d;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 4px calc(8px + env(safe-area-inset-bottom));z-index:20}
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--nav);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 4px calc(8px + env(safe-area-inset-bottom));z-index:20}
 .navb{background:none;border:none;color:var(--mut);font-size:11.5px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;min-height:0;border-radius:10px}
 .navb .ic{font-size:19px;line-height:1}
 .navb.on{color:var(--tx);background:var(--card2)}
-#restbar{position:fixed;top:0;left:0;right:0;background:#101a28;border-bottom:1px solid var(--line);padding:10px 14px calc(6px + env(safe-area-inset-top));z-index:30;display:none;align-items:center;gap:12px}
+#restbar{position:fixed;top:0;left:0;right:0;background:var(--hintbg);border-bottom:1px solid var(--line);padding:10px 14px calc(6px + env(safe-area-inset-top));z-index:30;display:none;align-items:center;gap:12px}
 #restbar .lbl{font-weight:700;font-size:14px;white-space:nowrap}
 #restbar .time{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;font-size:16px}
 #resttrack{position:absolute;left:0;bottom:0;height:3px;background:var(--good);width:0%}
-#toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#1c2a3b;border:1px solid var(--line);padding:10px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%}
+#toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:var(--toastbg);border:1px solid var(--line);padding:10px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%}
 #toast.on{opacity:1}
 .dangerzone{display:flex;gap:8px;flex-wrap:wrap}
-.hint{background:#101a28;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12.5px;color:var(--mut);margin-top:10px}
+.hint{background:var(--hintbg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12.5px;color:var(--mut);margin-top:10px}
 .chart{width:100%;height:auto;display:block}
 .exrow{display:grid;grid-template-columns:1fr 52px 64px 56px 56px;gap:6px;align-items:center;margin-bottom:7px}
 .exrow input{padding:8px 8px;min-height:40px;font-size:14px}
@@ -76,6 +77,29 @@ th{color:var(--mut);font-size:12px;font-weight:600}
 .altrow{display:block;width:100%;text-align:left;padding:12px;margin:6px 0;background:var(--card2);border:1px solid var(--line);color:var(--tx);border-radius:10px;font-size:14.5px}
 .exbtns{display:flex;gap:6px;margin-top:10px}
 .exbtns button{flex:1;min-height:40px;font-size:13px;padding:6px 2px}
+/* v3.7: PR celebration — visual only, no sound */
+#prfx{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
+#prfx .cf{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;animation:prfall var(--dur) linear forwards}
+@keyframes prfall{0%{transform:translate(0,-20px) rotate(0);opacity:1}80%{opacity:1}100%{transform:translate(var(--dx),105vh) rotate(var(--rot));opacity:0}}
+.prbanner{background:#0d2b20;border:1px solid var(--good);border-radius:12px;padding:12px 14px;margin-bottom:12px;color:var(--tx)}
+.prbanner b{color:var(--good)}
+html.themed-light .prbanner{background:#e7f6ef}
+/* v3.7: training calendar */
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calhead .mname{font-weight:800;font-size:15px}
+.calhead button{min-height:36px;padding:4px 12px}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.caldow{text-align:center;font-size:11px;color:var(--mut);font-weight:700;padding:2px 0}
+.cald{position:relative;aspect-ratio:1/1;border-radius:9px;border:1px solid var(--line);background:var(--card2);display:flex;align-items:flex-start;justify-content:flex-start;padding:3px 4px;font-size:11.5px;color:var(--mut);cursor:default}
+.cald.today{border-color:var(--acc)}
+.cald.has{cursor:pointer;background:var(--card);font-weight:700;color:var(--tx)}
+.cald .dot{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%}
+/* v3.7: body weight */
+.bwbig{font-size:30px;font-weight:800;letter-spacing:-.5px}
+.bwtrend{font-size:13px;font-weight:700}
+.bwtrend.up{color:var(--bad)} .bwtrend.down{color:var(--good)} .bwtrend.flat{color:var(--mut)}
+/* v3.7: theme toggle */
+.themeb{position:fixed;top:calc(8px + env(safe-area-inset-top));right:10px;z-index:25;min-height:38px;width:42px;padding:0;border-radius:50%;font-size:17px;background:var(--card);border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -86,8 +110,11 @@ th{color:var(--mut);font-size:12px;font-weight:600}
   <button class="navb" data-tab="hist" onclick="nav('hist')"><span class="ic">📜</span>History</button>
   <button class="navb" data-tab="prog" onclick="nav('prog')"><span class="ic">📈</span>Progress</button>
   <button class="navb" data-tab="stats" onclick="nav('stats')"><span class="ic">📊</span>Stats</button>
+  <button class="navb" data-tab="body" onclick="nav('body')"><span class="ic">⚖️</span>Body</button>
   <button class="navb" data-tab="program" onclick="nav('program')"><span class="ic">⚙️</span>Program</button>
 </nav>
+<div id="prfx"></div>
+<button class="themeb" id="themebtn" onclick="toggleTheme()" title="Toggle light/dark">🌙</button>
 <div id="toast"></div>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="sheet"></div></div>
 <script>
@@ -264,6 +291,22 @@ EXLIB.forEach(x=>{EXFOCUS[baseName(x.name).toLowerCase()]=x.focus;});
 function clone(o){return JSON.parse(JSON.stringify(o));}
 function loadState(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse(r):null; }catch(e){ return null; } }
 function stateValid(d){ return d && typeof d==='object' && d.program && Array.isArray(d.sessions); }
+
+/* v3.7: light/dark theme — CSS variable swap, dark default, choice remembered per device */
+function applyTheme(t){
+ document.documentElement.classList.toggle('themed-light', t==='light');
+ const b=document.getElementById('themebtn'); if(b) b.textContent = t==='light' ? '🌙' : '☀️';
+ try{ localStorage.setItem('ppltheme', t); }catch(e){}
+}
+function toggleTheme(){
+ const cur=(document.documentElement.classList.contains('themed-light'))?'light':'dark';
+ applyTheme(cur==='light'?'dark':'light');
+}
+(function(){
+ let t='dark';
+ try{ t=localStorage.getItem('ppltheme')||'dark'; }catch(e){}
+ applyTheme(t==='light'?'light':'dark');
+})();
 /* ---------- secondary storage: IndexedDB mirror (v3.6) ----------
    Every save() also writes here. At boot, if localStorage is missing or
    corrupt, the newer of the two copies wins. Protects against the iOS
@@ -292,6 +335,7 @@ if(!S.cardio) S.cardio=clone(DEFAULT_CARDIO);
 Object.keys(S.cardio).forEach(f=>{ const c=S.cardio[f]; if(c && !('machine' in c)) S.cardio[f]={machine:'Other',mins:''}; });
 if(!Array.isArray(S.sessions)) S.sessions=[];
 if(S.work===undefined) S.work=null;
+if(!Array.isArray(S.bw)) S.bw=[]; /* v3.7: body weight log */
 function save(){ S._savedAt=Date.now(); try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){ window.__errs.push('ls-save:'+e.message); } idbPut(S).catch(()=>{}); }
 /* boot: compare both copies, newer wins (10s grace — localStorage is written first, IDB lags a moment) */
 idbGet().then(d=>{
@@ -303,7 +347,7 @@ idbGet().then(d=>{
  save();
 }).catch(()=>{ if(!lsLoaded) save(); });
 
-let V={tab:'work', hist:null, prog:null};
+let V={tab:'work', hist:null, prog:null, cal:0};
 let restState=null, restIv=null;
 
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -337,10 +381,11 @@ function snapshotWork(f){
    const prev=lastExData(f,e.name);
    return {name:e.name, nSets:e.sets, repsText:e.reps, rest:e.rest||90,
     sets:Array.from({length:e.sets},(_,j)=>{
-     if(prev){ const p=prev.sets[Math.min(j,prev.sets.length-1)]; return {w:p.w||'', r:'', done:false}; }
+     if(prev){ const p=prev.sets[Math.min(j,prev.sets.length-1)]; return {w:p.w||'', r:String(p.r||'').trim()||'', done:false}; }
      return {w:e.weight||'', r:'', done:false};
     })};
   }),
+  note:'',
   cardio:(S.cardio&&S.cardio[f])?{machine:S.cardio[f].machine||'', mins:S.cardio[f].mins||'', fields:{}, note:'', done:false}:null};
 }
 function startSession(f){ S.work=snapshotWork(f); save(); V={tab:'work',hist:null,prog:null}; render(); }
@@ -374,16 +419,41 @@ function cardioSummary(c){ if(!c) return '';
  (CARDIO_MACHINES[c.machine]||[]).forEach(f=>{ const v=c.fields&&c.fields[f.k]; if(v!=null&&String(v).trim()!=='') parts.push(v+(f.unit==='%'?'%':(f.unit?' '+f.unit:''))); });
  return c.machine+(parts.length?' '+parts.join(' · '):'');
 }
+function setNote(v){ if(S.work){ S.work.note=v; save(); } }
 function finishSession(){
  const w=S.work; if(!w)return;
  const exs=w.ex.filter(e=>e.sets.some(s=>s.done||(parseFloat(s.w)>0&&String(s.r).trim()!=='')))
    .map(e=>({name:e.name, sets:e.sets.filter(s=>s.done||(parseFloat(s.w)>0&&String(s.r).trim()!=='')).map(s=>({w:s.w||'', r:s.r||''}))}));
  if(!exs.length){ toast('Log at least one set first'); return; }
- S.sessions.push({date:Date.now(), focus:w.focus, ex:exs, dur:Date.now()-w.started,
+ /* v3.7: PR celebration — new bests compared against everything logged so far;
+    stamped on the session so it fires exactly once (visual only, no sound) */
+ const prs=[]; exs.forEach(e=>{ let mw=0; (e.sets||[]).forEach(st=>{ const wgt=parseFloat(st.w); if(wgt>mw)mw=wgt; });
+  if(mw>0){ const k=e.name.toLowerCase(); let prev=0;
+   S.sessions.forEach(s=>(s.ex||[]).forEach(x=>{ if(x.name.toLowerCase()!==k)return; (x.sets||[]).forEach(st=>{ const pw=parseFloat(st.w); if(pw>prev)prev=pw; }); }));
+   if(mw>prev+0.001) prs.push({name:e.name,w:mw}); } });
+ S.sessions.push({date:Date.now(), focus:w.focus, ex:exs, dur:Date.now()-w.started, note:w.note||'',
+   prs:prs.map(p=>p.name+' '+p.w+'kg'),
    cardio:w.cardio?{machine:w.cardio.machine, mins:w.cardio.mins, fields:w.cardio.fields||{}, note:w.cardio.note||'', done:w.cardio.done}:null});
  S.work=null; save();
  if((S.settings||{}).autoBackup!==false) exportBackup(true);
- V={tab:'hist',hist:S.sessions.length-1,prog:null}; render(); toast('Session saved 💪');
+ V={tab:'hist',hist:S.sessions.length-1,prog:null}; render();
+ if(prs.length){ prConfetti(prs); toast('Session saved 💪 · '+prs.length+' new PR'+(prs.length>1?'s':'')); }
+ else toast('Session saved 💪');
+}
+/* v3.7: confetti burst — pure CSS animation in #prfx, zero audio */
+function prConfetti(prs){
+ const fx=document.getElementById('prfx'); if(!fx)return;
+ const cols=['#34d399','#4f8cff','#fbbf24','#fb7185','#c084fc','#60a5fa'];
+ const frag=document.createDocumentFragment();
+ for(let i=0;i<64;i++){ const d=document.createElement('div'); d.className='cf';
+  d.style.left=(Math.random()*100)+'%';
+  d.style.background=cols[i%cols.length];
+  d.style.setProperty('--dur',(1.5+Math.random()*1.4)+'s');
+  d.style.setProperty('--dx',(Math.random()*160-80)+'px');
+  d.style.setProperty('--rot',(Math.random()*720-360)+'deg');
+  frag.appendChild(d); }
+ fx.appendChild(frag);
+ setTimeout(()=>{ fx.innerHTML=''; },3400);
 }
 
 /* ---------- rest timer ---------- */
@@ -420,7 +490,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.6</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.7</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -474,6 +544,7 @@ function sessionView(){
   }
   h+='<input style="margin-top:8px" placeholder="notes — feel, pace, extra detail (optional)" value="'+esc(w.cardio.note)+'" oninput="cardioNote(this.value)"></div>';
  }
+ h+='<div class="card"><input style="min-height:46px" placeholder="📝 Session notes — how it felt, energy, form (optional)" value="'+esc(w.note||'')+'" oninput="setNote(this.value)"></div>';
  h+='<button class="good" style="width:100%;min-height:54px;font-size:17px" onclick="finishSession()">Finish session</button>';
  h+='<p class="hint">Tap ✓ to complete a set — the rest timer starts automatically and the next set weight is suggested (+2.5kg when you hit your reps).</p>';
  return h;
@@ -490,7 +561,9 @@ function histListView(){
   const i=S.sessions.length-1-idx;
   const f=FOCI.find(x=>x.id===s.focus)||{name:s.focus,color:'#8b98a5',icon:''};
   const top=maxW(s);
-  h+='<div class="card" onclick="openHist('+i+')" style="cursor:pointer">'
+  /* v3.7: PR banner on sessions that set new records (stamped once at save time) */
+  const prs=(s.prs&&s.prs.length)?'<div class="prbanner">🎉 <b>New PR</b> — '+s.prs.map(esc).join(', ')+'</div>':'';
+  h+=prs+'<div class="card" onclick="openHist('+i+')" style="cursor:pointer">'
    +'<div class="row" style="justify-content:space-between"><span class="tag" style="background:'+f.color+'22;color:'+f.color+'">'+f.icon+' '+f.name+'</span>'
    +'<span class="mut">'+fmtDate(s.date)+' · '+fmtTime(s.date)+(s.dur?' · '+fmtDurShort(s.dur):'')+'</span></div>'
    +'<div class="mut" style="margin-top:6px;font-size:13.5px">'+(top?('top lift '+top+'kg · '):'')+sessionVolume(s)+'kg volume'+((s.cardio&&s.cardio.done)?(' · '+esc(cardioSummary(s.cardio)||'cardio ✓')):'')+'</div></div>';
@@ -503,6 +576,7 @@ function histDetailView(i){
  const f=FOCI.find(x=>x.id===s.focus)||{name:s.focus,color:'#8b98a5',icon:''};
  const bests=exBests();
  let h='<div class="topline"><button class="sm" onclick="openHist(null)">←</button><div><h1 style="margin:0">'+f.icon+' '+f.name+' — '+fmtDate(s.date)+'</h1></div></div>';
+ if(s.prs&&s.prs.length){ h+='<div class="prbanner">🎉 <b>New PR</b> — '+s.prs.map(esc).join(', ')+'</div>'; }
  h+='<div class="card"><table><tr><th>Exercise</th><th>Sets (kg × reps)</th><th>Vol</th><th>e1RM</th></tr>';
  (s.ex||[]).forEach(e=>{
   let mv=0,me=0,mw=0;
@@ -512,6 +586,8 @@ function histDetailView(i){
   h+='<tr><td><b>'+esc(e.name)+'</b> '+pr+'</td><td class="mut">'+(e.sets||[]).map(st=>(st.w||'—')+'×'+(st.r||'—')).join('<br>')+'</td><td>'+Math.round(mv)+'</td><td>'+(me?me:'—')+'</td></tr>';
  });
  h+='</table></div>';
+ if(s.note){ h+='<div class="card"><b>📝 Notes</b><div class="mut" style="margin-top:3px">'+esc(s.note)+'</div></div>'; }
+ h+='<div class="card"><b>✏️ Edit notes</b><div class="mut" style="font-size:12px;margin:3px 0 7px">Stored with the session, shown on this page and in the PDF export.</div><input style="min-height:46px" placeholder="session notes (optional)" value="'+esc(s.note||'')+'" oninput="editNote('+i+',this.value)"></div>';
  if(s.cardio){ h+='<div class="card"><b>🏃 Cardio</b> '+(s.cardio.done?' ✓':' (skipped)')+'<div class="mut" style="margin-top:3px">'+esc(cardioSummary(s.cardio))+(s.cardio.note?' — '+esc(s.cardio.note):'')+'</div></div>'; }
  const bestSets=(s.ex||[]).flatMap(e=>e.sets.map(st=>({w:parseFloat(st.w)||0})));
  h+='<div class="row" style="margin-top:14px"><button class="sm" onclick="exportSessionPdf('+i+')">⬇ Export to PDF</button><button class="sm danger" onclick="delSession('+i+')">Delete session</button></div>';
@@ -519,6 +595,7 @@ function histDetailView(i){
 }
 function openHist(i){ V.hist=i; render(); }
 function delSession(i){ if(!confirm('Delete this session?'))return; S.sessions.splice(i,1); save(); V.hist=null; render(); }
+function editNote(i,v){ if(S.sessions[i]){ S.sessions[i].note=v; save(); } }
 
 function progView(){
  const names=allExNames();
@@ -712,7 +789,7 @@ function doSwap(i,name){
  e.name=name;
  e.sets=Array.from({length:n},(_,j)=>({
   w:prev&&prev.sets.length?(prev.sets[Math.min(j,prev.sets.length-1)].w||''):'',
-  r:'',done:false}));
+  r:prev&&prev.sets.length?String(prev.sets[Math.min(j,prev.sets.length-1)].r||'').trim():'',done:false}));
  save();render();toast('Swapped in '+name);
 }
 
@@ -754,7 +831,7 @@ function addLive(name){
  const f=S.work.focus;
  const prev=lastExData(f,name);
  S.work.ex.push({name:name, nSets:3, repsText:'10-12', rest:90,
-  sets:Array.from({length:3},(_,j)=>({w:prev&&prev.sets.length?(prev.sets[Math.min(j,prev.sets.length-1)].w||''):'',r:'',done:false}))});
+  sets:Array.from({length:3},(_,j)=>({w:prev&&prev.sets.length?(prev.sets[Math.min(j,prev.sets.length-1)].w||''):'',r:prev&&prev.sets.length?String(prev.sets[Math.min(j,prev.sets.length-1)].r||'').trim():'',done:false}))});
  closeModal();save();render();toast('Added '+name+' to this workout');
 }
 
@@ -812,6 +889,32 @@ function byDayChart(counts){
   });
   return svg+'</svg>';
 }
+function calNav(d){ V.cal+=d; render(); }
+/* v3.7: training calendar — month grid, focus-coloured dots, tap a day to open that session */
+function calMonth(off){
+ const d=new Date(); d.setDate(1); d.setHours(0,0,0,0); d.setMonth(d.getMonth()+off);
+ const y=d.getFullYear(), m=d.getMonth();
+ const first=(new Date(y,m,1).getDay()+6)%7; // Monday-first
+ const nDays=new Date(y,m+1,0).getDate();
+ const byDate={}; S.sessions.forEach(s=>{ const t=new Date(s.date); if(t.getFullYear()===y&&t.getMonth()===m){ byDate[t.getDate()]=s; } });
+ const today=new Date();
+ let h='<div class="calhead"><button class="sm" onclick="calNav(-1)">‹</button>'
+  +'<span class="mname">'+d.toLocaleDateString(undefined,{month:'long',year:'numeric'})+'</span>'
+  +'<button class="sm" onclick="calNav(1)">›</button></div>';
+ h+='<div class="calgrid">';
+ ['M','T','W','T','F','S','S'].forEach(x=>h+='<div class="caldow">'+x+'</div>');
+ for(let i=0;i<first;i++) h+='<div></div>';
+ for(let dd=1;dd<=nDays;dd++){
+  const s=byDate[dd];
+  const isToday=dd===today.getDate()&&m===today.getMonth()&&y===today.getFullYear();
+  const cls='cald'+(isToday?' today':'')+(s?' has':'');
+  const f=s?(FOCI.find(x=>x.id===s.focus)||{color:'#8b98a5'}):null;
+  h+='<div class="'+cls+'"'+(s?' onclick="openHist('+S.sessions.indexOf(s)+')" title="'+esc(s.focus)+'"':'')+'>'
+   +dd+(s?'<span class="dot" style="background:'+f.color+'"></span>':'')+'</div>';
+ }
+ h+='</div>';
+ return h;
+}
 function statsView(){
   const t=totals(), st=weekStreaks(), buckets=weeklyVolume(8), days=byDay(), foc=byFocus();
   let h='<h1>Stats</h1>';
@@ -829,6 +932,8 @@ function statsView(){
   h+='<div class="card"><h2>📅 This week <span class="mut" style="font-weight:400">'+wkRange+'</span></h2>'
    +'<div style="font-size:14px">'+tw.count+' workout'+(tw.count===1?'':'s')+' · '+tw.vol+' kg</div></div>';
   h+='<div class="card"><h2>Weekly volume — last 8 weeks</h2>'+weeklyVolChart(buckets)+'</div>';
+  h+='<div class="card"><h2>📆 Training calendar</h2>'+calMonth(V.cal)
+   +'<p class="hint" style="margin-top:8px">Dots are coloured by focus — tap a day to open that session.</p></div>';
   h+='<div class="card"><h2>By day of week</h2>'+byDayChart(days)
    +'<p class="hint" style="margin-top:8px">Bright bars are your plan days: <b>Mon</b> · <b>Tue</b> · <b>Thu</b> · <b>Fri</b>. Core any day.</p></div>';
   h+='<div class="card"><h2>By focus</h2><table><tr><th>Focus</th><th>Sessions</th><th>Volume</th><th>Last</th></tr>'
@@ -937,6 +1042,7 @@ function sessionPdfLines(i){
  bits.push(sessionVolume(s)+' kg volume');
  const top=maxW(s); if(top)bits.push('top lift '+top+' kg');
  L.push({t:bits.join('  ·  '),f:'F1',s:10,sb:3,c:mut});
+ if(s.note)L.push({t:'Notes: '+s.note,f:'F1',s:9.5,sb:2,c:[0.45,0.5,0.55]});
  L.push({t:'',f:'F1',s:6,sb:6});
  (s.ex||[]).forEach(e=>{
   L.push({t:e.name,f:'F2',s:12,sb:8});
@@ -979,6 +1085,62 @@ let toastT=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2200); }
 
+/* ---------- v3.7: body weight ---------- */
+function bwCommit(){
+ const d=document.getElementById('bwd'), v=document.getElementById('bwv'); if(!d||!v) return;
+ const val=parseFloat(v.value); if(!(val>0)){ toast('Enter a weight in kg'); return; }
+ const t=d.value?new Date(d.value+'T12:00:00').getTime():Date.now(); if(isNaN(t)){ toast('Bad date'); return; }
+ S.bw.push({t:t, w:Math.round(val*10)/10}); S.bw.sort((a,b)=>a.t-b.t);
+ save(); render(); toast('Logged '+S.bw[S.bw.length-1].w+'kg \u2696\ufe0f');
+}
+function bwDel(i){ if(S.bw[i]){ S.bw.splice(i,1); save(); render(); } }
+function bwDelta(cut){
+ const e=S.bw; if(e.length<2) return null;
+ const last=e[e.length-1]; let ref=null;
+ e.forEach(x=>{ if(x.t<=cut && (!ref||x.t>ref.t)) ref=x; });
+ if(!ref) return null;
+ return last.w-ref.w;
+}
+function bwChart(){
+ const e=S.bw;
+ if(e.length<2) return '<p class="hint" style="margin:8px 0 0">Log at least two entries to see the trend line.</p>';
+ const W=600,H=170,P=26, t0=e[0].t, t1=e[e.length-1].t, span=Math.max(1,t1-t0);
+ const ws=e.map(x=>x.w), lo=Math.min(...ws)-0.5, hi=Math.max(...ws)+0.5, rng=Math.max(1,hi-lo);
+ const X=t=>P+(t-t0)/span*(W-2*P), Y=w=>H-P-(w-lo)/rng*(H-2*P);
+ let svg='<svg class="chart" viewBox="0 0 '+W+' '+H+'">';
+ svg+='<polyline points="'+e.map(x=>X(x.t).toFixed(1)+','+Y(x.w).toFixed(1)).join(' ')+'" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+ e.forEach((x,i)=>{ svg+='<circle cx="'+X(x.t).toFixed(1)+'" cy="'+Y(x.w).toFixed(1)+'" r="'+(i===e.length-1?4:2.6)+'" fill="'+(i===e.length-1?'#34d399':'#4f8cff')+'"/>'; });
+ svg+='<text x="'+P+'" y="'+(H-P+14)+'" fill="#8b98a5" font-size="11" text-anchor="start">'+new Date(t0).toLocaleDateString(undefined,{day:'numeric',month:'short'})+'</text>';
+ svg+='<text x="'+(W-P)+'" y="'+(H-P+14)+'" fill="#8b98a5" font-size="11" text-anchor="end">'+new Date(t1).toLocaleDateString(undefined,{day:'numeric',month:'short'})+'</text>';
+ svg+='<text x="'+X(t1).toFixed(1)+'" y="'+(Y(e[e.length-1].w)-8).toFixed(1)+'" fill="#e6edf3" font-size="10.5" text-anchor="end">'+e[e.length-1].w+'</text>';
+ return svg+'</svg>';
+}
+function bodyView(){
+ const e=S.bw, today=new Date().toISOString().slice(0,10);
+ let h='<h1>Body</h1><p class="sub">Track body weight over time \u00b7 kg</p>';
+ h+='<div class="card"><h2>Log weight</h2><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">'
+  +'<input type="date" id="bwd" value="'+today+'" style="flex:1;min-width:132px">'
+  +'<input class="num" inputmode="decimal" step="0.1" id="bwv" placeholder="kg" style="width:84px">'
+  +'<button onclick="bwCommit()">Log \u2696\ufe0f</button></div></div>';
+ if(e.length){
+  const last=e[e.length-1], first=e[0], dAll=last.w-first.w, m4=bwDelta(Date.now()-28*864e5);
+  h+='<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:12px">'
+   +'<div><div class="mut" style="font-size:12.5px">Current</div><div style="font-size:22px;font-weight:800">'+last.w+'kg</div></div>'
+   +'<div><div class="mut" style="font-size:12.5px">vs 4 wks ago</div><div style="font-size:22px;font-weight:800;color:'+(m4==null?'var(--mut)':(m4<=0?'var(--good)':'var(--bad)'))+'">'+(m4==null?'\u2014':(m4>0?'+':'')+m4.toFixed(1))+'</div></div>'
+   +'<div><div class="mut" style="font-size:12.5px">All time</div><div style="font-size:22px;font-weight:800;color:'+(dAll<=0?'var(--good)':'var(--bad)')+'">'+(dAll>0?'+':'')+dAll.toFixed(1)+'</div></div>'
+   +'</div><div class="mut" style="font-size:12px;margin-top:6px">Last logged '+fmtDate(last.t)+' \u00b7 '+e.length+' entr'+(e.length===1?'y':'ies')+'</div></div>';
+  h+='<div class="card"><h2>Trend</h2>'+bwChart()+'</div>';
+  h+='<div class="card"><h2>History</h2>';
+  e.slice().reverse().slice(0,14).forEach(x=>{
+   h+='<div class="row" style="justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)">'
+    +'<span>'+fmtDate(x.t)+'</span><span style="font-weight:700">'+x.w+'kg &nbsp;<button class="sm" style="color:var(--bad)" onclick="bwDel('+e.indexOf(x)+')">\u2715</button></span></div>';
+  });
+  h+='</div>';
+ } else {
+  h+='<div class="card"><p class="hint" style="margin:0">No weights logged yet. Step on the scales and enter your weight above \u2014 once you have a couple of entries the trend line, 4-week change and all-time change appear here.</p></div>';
+ }
+ return h;
+}
 function render(){
  const app=document.getElementById('app');
  let h='';
@@ -986,6 +1148,7 @@ function render(){
  else if(V.tab==='hist') h=V.hist!=null?histDetailView(V.hist):histListView();
  else if(V.tab==='prog') h=progView();
  else if(V.tab==='stats') h=statsView();
+ else if(V.tab==='body') h=bodyView(); /* v3.7 */
  else h=programView();
  app.innerHTML=h;
  document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.tab));
@@ -1076,6 +1239,23 @@ async function selftest(){
   const hv=homeView(); if(!hv.includes('Data &amp; backup')) throw new Error('homeView: backup card missing');
   if(!hv.includes('setAutoBackup')) throw new Error('homeView: auto-backup toggle missing');
   if(!hv.includes('Save backup file')) throw new Error('homeView: save backup button missing');
+  // v3.7 checks: theme, PR stamping, training calendar, body weight, body nav
+  if(typeof toggleTheme!=='function') throw new Error('theme: toggle missing');
+  if(!document.querySelector('style').textContent.includes('themed-light')) throw new Error('theme: light vars missing');
+  const cal=statsView(); if(!cal.includes('Training calendar')||!cal.includes('calgrid')) throw new Error('statsView: calendar missing');
+  const prw=snapshotWork('push'); prw.ex[0].sets.forEach(s=>{ s.w='45'; s.r='5'; s.done=true; });
+  S.work=prw; finishSession();
+  if(!(S.sessions[S.sessions.length-1].prs||[]).length) throw new Error('v3.7: PR not stamped');
+  if(!histDetailView(S.sessions.length-1).includes('prbanner')) throw new Error('v3.7: PR banner missing in detail');
+  const bwN=S.bw.length;
+  S.bw.push({t:Date.now()-7*864e5,w:80},{t:Date.now(),w:78.5}); S.bw.sort((a,b)=>a.t-b.t);
+  const bvH=bodyView();
+  if(!bvH.includes('Log weight')) throw new Error('bodyView: log card missing');
+  if(!bvH.includes('Trend')) throw new Error('bodyView: trend chart missing');
+  if(!bvH.includes('78.5kg')) throw new Error('bodyView: current weight missing');
+  bwDel(S.bw.length-1); bwDel(S.bw.length-1);
+  if(S.bw.length!==bwN) throw new Error('bwDel');
+  if(!document.querySelector('.navb[data-tab="body"]')) throw new Error('nav: body tab missing');
   const res=JSON.stringify({ok:true, pwa:pwa, pdf:{prog:pbytes.length,sess:sbytes.length}, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, backup:{mirrored:mir.sessions.length, last:!!bi.last, auto:bi.auto}, errs:window.__errs});
   S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
   return res;
