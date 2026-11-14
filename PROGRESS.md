@@ -25,7 +25,7 @@
 - v3.0 — Exercise alternatives, how-to guides with verified videos, extra exercises/sets, workout timer, version tag.
 
 ## In progress (clear this when shipped)
-- *(nothing currently — start a work item here with: what, why, state so far, next step)*
+- **Next workload (user-set, 2026-11-14): cloud save / cross-device sync.** Explore a GitHub-based save option first if feasible (e.g. pushing/pulling the JSON backup to a private repo via the GitHub API), otherwise other options. Constraints from the user: $0, simple for partner (ideally no passwords), works from phone + PC. Supabase free tier already the leading "proper backend" candidate. Separately: keep adding features toward **v4.0** — backlog candidates in Deferred (CSV export, weekly volume goal, RPE per set) + any new ideas.
 
 ## Deferred / backlog (user-approved "down the line")
 - **Username/password login + cross-device cloud sync.** v3.6 covered LOCAL data safety (IDB mirror + backup files); true cross-device sync still needs a backend — Supabase free tier is the leading candidate ($0, not site hosting). User is open to it later; partner simplicity is the constraint (no passwords ideally).
