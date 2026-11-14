@@ -263,12 +263,45 @@ EXLIB.forEach(x=>{EXFOCUS[baseName(x.name).toLowerCase()]=x.focus;});
 
 function clone(o){return JSON.parse(JSON.stringify(o));}
 function loadState(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function stateValid(d){ return d && typeof d==='object' && d.program && Array.isArray(d.sessions); }
+/* ---------- secondary storage: IndexedDB mirror (v3.6) ----------
+   Every save() also writes here. At boot, if localStorage is missing or
+   corrupt, the newer of the two copies wins. Protects against the iOS
+   behaviour of wiping localStorage on home-screen apps it considers idle. */
+const IDB_NAME='ppl-tracker-db', IDB_STORE='kv', IDB_KEY='state';
+function idbOpen(){ return new Promise((res,rej)=>{ if(!('indexedDB' in window)){ rej(new Error('no idb')); return; }
+ const rq=indexedDB.open(IDB_NAME,1);
+ rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore(IDB_STORE); }catch(e){} };
+ rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
+function idbPut(st){ return idbOpen().then(db=>new Promise(res=>{
+ const tx=db.transaction(IDB_STORE,'readwrite');
+ try{ tx.objectStore(IDB_STORE).put(st,IDB_KEY); }catch(e){}
+ tx.oncomplete=()=>{ db.close(); res(); }; tx.onerror=()=>{ db.close(); res(); }; tx.onabort=()=>{ db.close(); res(); }; })); }
+function idbGet(){ return idbOpen().then(db=>new Promise(res=>{
+ const rq=db.transaction(IDB_STORE).objectStore(IDB_STORE).get(IDB_KEY);
+ rq.onsuccess=()=>{ db.close(); res(rq.result||null); }; rq.onerror=()=>{ db.close(); res(null); }; })); }
+function idbDel(){ return idbOpen().then(db=>new Promise(res=>{
+ const tx=db.transaction(IDB_STORE,'readwrite');
+ try{ tx.objectStore(IDB_STORE).delete(IDB_KEY); }catch(e){}
+ tx.oncomplete=()=>{ db.close(); res(); }; tx.onerror=()=>{ db.close(); res(); }; tx.onabort=()=>{ db.close(); res(); }; })); }
+function adoptState(d){ S=d; if(!S.cardio)S.cardio={}; if(!S.settings)S.settings={}; if(!Array.isArray(S.sessions))S.sessions=[]; S.work=null; save(); render(); }
 let S=loadState();
-if(!S || !S.program){ S={program:clone(DEFAULT_PROGRAM), cardio:clone(DEFAULT_CARDIO), sessions:[], work:null, settings:{}}; save(); }
+const lsLoaded=stateValid(S);
+if(!lsLoaded){ S={program:clone(DEFAULT_PROGRAM), cardio:clone(DEFAULT_CARDIO), sessions:[], work:null, settings:{}}; /* NOT saved yet — boot check must read the IDB mirror first, or the fresh state overwrites it */ }
 if(!S.cardio) S.cardio=clone(DEFAULT_CARDIO);
 Object.keys(S.cardio).forEach(f=>{ const c=S.cardio[f]; if(c && !('machine' in c)) S.cardio[f]={machine:'Other',mins:''}; });
+if(!Array.isArray(S.sessions)) S.sessions=[];
 if(S.work===undefined) S.work=null;
-function save(){ localStorage.setItem(LS,JSON.stringify(S)); }
+function save(){ S._savedAt=Date.now(); try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){ window.__errs.push('ls-save:'+e.message); } idbPut(S).catch(()=>{}); }
+/* boot: compare both copies, newer wins (10s grace — localStorage is written first, IDB lags a moment) */
+idbGet().then(d=>{
+ if(!lsLoaded){
+   if(stateValid(d) && (d._savedAt||0)>0){ adoptState(d); toast('Data recovered from backup storage ✓'); return; }
+   save(); return;
+ }
+ if(stateValid(d) && (d._savedAt||0) > (S._savedAt||0)+10000){ adoptState(d); toast('Loaded newer data from backup storage ✓'); return; }
+ save();
+}).catch(()=>{ if(!lsLoaded) save(); });
 
 let V={tab:'work', hist:null, prog:null};
 let restState=null, restIv=null;
@@ -349,6 +382,7 @@ function finishSession(){
  S.sessions.push({date:Date.now(), focus:w.focus, ex:exs, dur:Date.now()-w.started,
    cardio:w.cardio?{machine:w.cardio.machine, mins:w.cardio.mins, fields:w.cardio.fields||{}, note:w.cardio.note||'', done:w.cardio.done}:null});
  S.work=null; save();
+ if((S.settings||{}).autoBackup!==false) exportBackup(true);
  V={tab:'hist',hist:S.sessions.length-1,prog:null}; render(); toast('Session saved 💪');
 }
 
@@ -386,7 +420,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.5.1</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.6</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -394,14 +428,20 @@ function homeView(){
    +'<div class="last mut">'+(lt.d?('Last: '+fmtDate(lt.d)+(lt.w?' · top '+lt.w+'kg':'')):'Not trained yet')+' · '+(S.program[f.id]||[]).length+' exercises</div>'
    +'<button class="start" style="background:'+f.color+';border-color:'+f.color+';color:#0b0f14">Start session</button></div>';
  });
- h+='<div class="card"><h2>Data &amp; devices</h2><div class="row" style="flex-wrap:wrap">'
-  +'<button class="sm" onclick="doExport()">⬇ Export backup</button>'
+ h+='<div class="card"><h2>Data &amp; backup</h2>';
+ const bi=backupInfo();
+ h+= bi.stale
+  ?'<div class="card" style="margin:0 0 10px;border-color:#8a6d2f;background:#171307"><b style="color:#e0b34e">⚠ Time to back up</b><div class="mut" style="font-size:12px;margin-top:3px">'+(bi.last?'It\'s been '+bi.days+' days since your last backup':'You haven\'t saved a backup yet')+' — '+(bi.since?bi.since+' workout'+(bi.since>1?'s':'')+' not covered by a backup file.':'')+' Tap <b>Save backup file</b> below.</div></div>'
+  :'<p class="mut" style="font-size:12px;margin:0 0 10px">'+(bi.last?('Last backup: '+(bi.days===0?'today':bi.days+' day'+(bi.days>1?'s':'')+' ago')+(bi.since?' · '+bi.since+' since':' ✓')):'No backup file saved yet — data is safe on this device and mirrored automatically.')+'</p>';
+ h+='<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;font-size:14px"><input type="checkbox" '+(bi.auto?'checked':'')+' style="width:18px;height:18px;accent-color:var(--good)" onchange="setAutoBackup(this.checked)"> <span>Auto-backup after each workout <span class="mut" style="font-size:12px">(saves a file to your phone)</span></span></label>';
+ h+='<div class="row" style="flex-wrap:wrap">'
+  +'<button class="sm" onclick="doExport()">⬇ Save backup file</button>'
   +'<button class="sm" onclick="document.getElementById(\'imp\').click()">⬆ Import file</button>'
   +'<input type="file" id="imp" accept="application/json" style="display:none" onchange="doImport(this)">'
   +'<button class="sm" onclick="var w=document.getElementById(\'pastewrap\');w.style.display=(w.style.display===\'none\')?\'block\':\'none\'">📋 Paste backup</button>'
   +'</div><div id="pastewrap" style="display:none;margin-top:8px"><textarea id="pastetext" style="width:100%;min-height:90px;font:12px monospace;background:#0e151d;border:1px solid var(--line);border-radius:9px;color:var(--tx);padding:8px" placeholder="paste exported JSON here"></textarea>'
   +'<button class="sm" style="margin-top:6px" onclick="doPaste()">Import pasted data</button></div>'
-  +'<p class="hint">Data lives on this device. To move to another phone: Export backup here (save the .json to iCloud Drive), then on the other phone open the tracker → Import file → pick it from iCloud. Your last weights and PRs follow you.</p></div>';
+  +'<p class="hint">Every save is also mirrored to a second hidden store on this phone, so cleared browser data can be recovered automatically. The backup file is your off-device copy — save it in the Files app or move it to iCloud Drive. On a new phone: open the tracker → Import file → pick it. Your weights, PRs and history follow you.</p></div>';
  return h;
 }
 
@@ -559,14 +599,31 @@ function moveEx(f,i,d){ const a=S.program[f]; const j=i+d; if(j<0||j>=a.length)r
 function setCardio(f,k,v){ if(!S.cardio[f]) S.cardio[f]={machine:'',mins:''}; S.cardio[f][k]=v; save(); }
 function toggleCardio(f){ if(S.cardio[f]){ delete S.cardio[f]; } else { S.cardio[f]={machine:'Treadmill',mins:''}; } save(); render(); }
 function resetProg(){ if(!confirm('Replace your program with the built-in default? Sessions are kept.'))return; S.program=clone(DEFAULT_PROGRAM); S.cardio=clone(DEFAULT_CARDIO); save(); render(); toast('Program reset'); }
-function eraseAll(){ if(!confirm('Erase EVERYTHING (program + all sessions)?'))return; if(!confirm('Really? This cannot be undone.'))return; localStorage.removeItem(LS); location.reload(); }
+function setAutoBackup(v){ S.settings=S.settings||{}; S.settings.autoBackup=v; save(); render(); toast(v?'Auto-backup on — a file saves after each workout':'Auto-backup off'); }
+async function eraseAll(){ if(!confirm('Erase EVERYTHING (program + all sessions)?'))return; if(!confirm('Really? This cannot be undone.'))return;
+ await idbDel(); localStorage.removeItem(LS); location.reload(); }
 
 /* ---------- data in/out ---------- */
+function exportBackup(silent){
+ try{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='ppl-tracker-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  S.settings=S.settings||{}; S.settings.lastBackup=Date.now(); S.settings.lastBackupCount=S.sessions.length; save();
+  return true;
+ }catch(e){ if(!silent) toast('Backup failed: '+e.message); return false; }
+}
 function doExport(){
- const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
- const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
- a.download='ppl-tracker-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
- setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+ if(exportBackup(false)){ render(); toast('Backup file saved ✓'); }
+}
+function backupInfo(){
+ const s=S.settings||{}; const last=s.lastBackup||0;
+ const since=(s.lastBackupCount!=null)?Math.max(0,S.sessions.length-s.lastBackupCount):S.sessions.length;
+ const days=last?Math.floor((Date.now()-last)/86400000):null;
+ const stale=!last || days>7 || since>=3;
+ return {last, days, since, stale, auto: s.autoBackup!==false};
 }
 function doImport(inp){
  const f=inp.files&&inp.files[0]; if(!f)return;
@@ -937,7 +994,7 @@ function render(){
 }
 
 /* ---------- self-test (call from console / dev) ---------- */
-function selftest(){
+async function selftest(){
  let before='{"sessions":[]}';
  try{
   before=JSON.stringify(S);
@@ -1009,7 +1066,17 @@ function selftest(){
   if(!histHtml.includes('kg volume')) throw new Error('histListView: volume line missing');
   const detHtml=histDetailView(S.sessions.length-1);
   if(!detHtml.includes('exportSessionPdf(')) throw new Error('histDetailView: export button missing');
-  const res=JSON.stringify({ok:true, pwa:pwa, pdf:{prog:pbytes.length,sess:sbytes.length}, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, errs:window.__errs});
+  // v3.6 checks: data safety — IDB mirror, backup status, backup JSON validity, backup UI
+  await new Promise(r=>setTimeout(r,200)); // let the async idbPut from save() land
+  const mir=await idbGet();
+  if(!stateValid(mir)) throw new Error('idb mirror missing/invalid');
+  if(mir.sessions.length!==S.sessions.length) throw new Error('idb mirror session count '+mir.sessions.length+'/'+S.sessions.length);
+  const bi=backupInfo(); if(typeof bi.stale!=='boolean'||typeof bi.since!=='number'||typeof bi.auto!=='boolean') throw new Error('backupInfo shape');
+  const bj=JSON.parse(JSON.stringify(S,null,2)); if(!bj.program||!Array.isArray(bj.sessions)) throw new Error('backup JSON invalid');
+  const hv=homeView(); if(!hv.includes('Data &amp; backup')) throw new Error('homeView: backup card missing');
+  if(!hv.includes('setAutoBackup')) throw new Error('homeView: auto-backup toggle missing');
+  if(!hv.includes('Save backup file')) throw new Error('homeView: save backup button missing');
+  const res=JSON.stringify({ok:true, pwa:pwa, pdf:{prog:pbytes.length,sess:sbytes.length}, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, backup:{mirrored:mir.sessions.length, last:!!bi.last, auto:bi.auto}, errs:window.__errs});
   S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
   return res;
  }catch(e){ S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render(); return JSON.stringify({ok:false,err:String(e),errs:window.__errs}); }

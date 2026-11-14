@@ -1,8 +1,8 @@
-/* PPL+ Tracker — service worker (v3.5.1)
+/* PPL+ Tracker — service worker (v3.6)
    App-shell caching: the whole app is one HTML file, so caching it +
-   manifest + icons gives full offline use. Data lives in localStorage,
-   which is unaffected by the cache. */
-const CACHE='ppl-v3.5.1';
+   manifest + icons gives full offline use. Data lives in localStorage +
+   an IndexedDB mirror, both unaffected by the cache. */
+const CACHE='ppl-v3.6';
 const SHELL = [
   './index.html',
   './manifest.json',
