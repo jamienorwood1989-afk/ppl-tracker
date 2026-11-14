@@ -80,6 +80,7 @@ th{color:var(--mut);font-size:12px;font-weight:600}
   <button class="navb" data-tab="work" onclick="nav('work')"><span class="ic">🏋️</span>Workouts</button>
   <button class="navb" data-tab="hist" onclick="nav('hist')"><span class="ic">📜</span>History</button>
   <button class="navb" data-tab="prog" onclick="nav('prog')"><span class="ic">📈</span>Progress</button>
+  <button class="navb" data-tab="stats" onclick="nav('stats')"><span class="ic">📊</span>Stats</button>
   <button class="navb" data-tab="program" onclick="nav('program')"><span class="ic">⚙️</span>Program</button>
 </nav>
 <div id="toast"></div>
@@ -336,7 +337,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.1</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.2</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -624,6 +625,85 @@ function addLive(name){
  closeModal();save();render();toast('Added '+name+' to this workout');
 }
 
+/* ============ v3.2: stats ============ */
+function addDaysTime(ms,n){ const d=new Date(ms); d.setDate(d.getDate()+n); return d.getTime(); }
+function weekStart(ms){ const d=new Date(ms); const off=(d.getDay()+6)%7; d.setHours(0,0,0,0); d.setDate(d.getDate()-off); return d.getTime(); }
+function weekLabel(ws){ return new Date(ws).toLocaleDateString(undefined,{day:'numeric',month:'short'}); }
+function totals(){ let vol=0,time=0; S.sessions.forEach(s=>{ vol+=sessionVolume(s); time+=(s.dur||0); }); return {vol:Math.round(vol),time:Math.round(time),count:S.sessions.length}; }
+function weekStreaks(){
+  const ws=new Set(); S.sessions.forEach(s=>ws.add(weekStart(s.date)));
+  if(!ws.size) return {cur:0,best:0};
+  const curWeek=weekStart(Date.now());
+  let w=ws.has(curWeek)?curWeek:addDaysTime(curWeek,-7), cur=0;
+  while(ws.has(w)){ cur++; w=addDaysTime(w,-7); }
+  const weeks=[...ws].sort((a,b)=>a-b);
+  let best=0,run=0,prev=null;
+  for(const wk of weeks){ run=(prev!=null&&wk===addDaysTime(prev,7))?run+1:1; if(run>best)best=run; prev=wk; }
+  return {cur,best};
+}
+function weeklyVolume(n){
+  const curWeek=weekStart(Date.now()); const buckets=[],byStart={};
+  for(let i=n-1;i>=0;i--){ const start=addDaysTime(curWeek,-7*i); buckets.push({start,vol:0,count:0}); byStart[start]=buckets[buckets.length-1]; }
+  S.sessions.forEach(s=>{ const b=byStart[weekStart(s.date)]; if(b){ b.vol+=sessionVolume(s); b.count++; } });
+  buckets.forEach(b=>b.vol=Math.round(b.vol));
+  return buckets;
+}
+function byDay(){ const out=[0,0,0,0,0,0,0]; S.sessions.forEach(s=>{ out[(new Date(s.date).getDay()+6)%7]++; }); return out; }
+function byFocus(){ return FOCI.map(f=>{ let vol=0,count=0; S.sessions.forEach(s=>{ if(s.focus===f.id){ vol+=sessionVolume(s); count++; } }); return {f,vol:Math.round(vol),count,last:lastTrained(f.id)}; }); }
+function statCard(icon,title,val,sub){
+  return '<div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px">'
+   +'<div class="mut" style="font-size:12.5px">'+icon+' '+title+'</div>'
+   +'<div style="font-size:22px;font-weight:800;margin-top:2px">'+val+'</div>'
+   +'<div class="mut" style="font-size:12px">'+sub+'</div></div>';
+}
+function weeklyVolChart(buckets){
+  const W=600,H=190,P=24,max=Math.max(1,...buckets.map(b=>b.vol)),bw=(W-2*P)/buckets.length;
+  let svg='<svg class="chart" viewBox="0 0 '+W+' '+H+'">';
+  buckets.forEach((b,i)=>{
+   const h=(H-2*P-20)*(b.vol/max), x=P+i*bw+bw*0.18, y=H-P-h, cx=P+i*bw+bw/2, last=i===buckets.length-1;
+   svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bw*0.64).toFixed(1)+'" height="'+Math.max(1.5,h).toFixed(1)+'" rx="4" fill="'+(last?'#34d399':'#4f8cff')+'"/>';
+   svg+='<text x="'+cx.toFixed(1)+'" y="'+(H-P+14).toFixed(1)+'" fill="#8b98a5" font-size="11" text-anchor="middle">'+weekLabel(b.start)+'</text>';
+   if(b.vol>0) svg+='<text x="'+cx.toFixed(1)+'" y="'+(y-5).toFixed(1)+'" fill="#e6edf3" font-size="10.5" text-anchor="middle">'+b.vol+'</text>';
+  });
+  return svg+'</svg>';
+}
+function byDayChart(counts){
+  const labels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], planned=[0,1,3,4];
+  const W=600,H=180,P=24,max=Math.max(1,...counts),bw=(W-2*P)/7;
+  let svg='<svg class="chart" viewBox="0 0 '+W+' '+H+'">';
+  counts.forEach((c,i)=>{
+   const h=(H-2*P-20)*(c/max), x=P+i*bw+bw*0.2, y=H-P-h, cx=P+i*bw+bw/2;
+   svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bw*0.6).toFixed(1)+'" height="'+Math.max(1.5,h).toFixed(1)+'" rx="4" fill="'+(planned.includes(i)?'#4f8cff':'#2b3a4d')+'"/>';
+   svg+='<text x="'+cx.toFixed(1)+'" y="'+(H-P+14).toFixed(1)+'" fill="#8b98a5" font-size="11" text-anchor="middle">'+labels[i]+'</text>';
+   if(c>0) svg+='<text x="'+cx.toFixed(1)+'" y="'+(y-5).toFixed(1)+'" fill="#e6edf3" font-size="10.5" text-anchor="middle">'+c+'</text>';
+  });
+  return svg+'</svg>';
+}
+function statsView(){
+  const t=totals(), st=weekStreaks(), buckets=weeklyVolume(8), days=byDay(), foc=byFocus();
+  let h='<h1>Stats</h1>';
+  if(!t.count){ h+='<p class="sub">No sessions yet. Finish a workout and your stats will build up here.</p>'; return h; }
+  const now=weekStart(Date.now());
+  const wkRange=weekLabel(now)+' – '+new Date(addDaysTime(now,6)).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  const tw=buckets[buckets.length-1];
+  h+='<p class="sub">'+t.count+' session'+(t.count===1?'':'s')+' logged</p>';
+  h+='<div class="grid2">'
+   +statCard('🔥','Streak', st.cur, 'weeks in a row · best '+st.best)
+   +statCard('📦','Total volume', t.vol+' kg', 'all sessions')
+   +statCard('⏱','Gym time', fmtDurShort(t.time), 'total duration')
+   +statCard('🗓','Sessions', t.count, 'all time')
+   +'</div>';
+  h+='<div class="card"><h2>📅 This week <span class="mut" style="font-weight:400">'+wkRange+'</span></h2>'
+   +'<div style="font-size:14px">'+tw.count+' workout'+(tw.count===1?'':'s')+' · '+tw.vol+' kg</div></div>';
+  h+='<div class="card"><h2>Weekly volume — last 8 weeks</h2>'+weeklyVolChart(buckets)+'</div>';
+  h+='<div class="card"><h2>By day of week</h2>'+byDayChart(days)
+   +'<p class="hint" style="margin-top:8px">Bright bars are your plan days: <b>Mon</b> · <b>Tue</b> · <b>Thu</b> · <b>Fri</b>. Core any day.</p></div>';
+  h+='<div class="card"><h2>By focus</h2><table><tr><th>Focus</th><th>Sessions</th><th>Volume</th><th>Last</th></tr>'
+   +foc.map(r=>'<tr><td><span style="color:'+r.f.color+'">'+r.f.icon+' '+r.f.name+'</span></td><td>'+r.count+'</td><td>'+r.vol+'</td><td class="mut">'+(r.last?fmtDate(r.last):'—')+'</td></tr>').join('')
+   +'</table></div>';
+  return h;
+}
+
 /* ---------- toast / render ---------- */
 let toastT=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
@@ -635,6 +715,7 @@ function render(){
  if(V.tab==='work') h=S.work?sessionView():homeView();
  else if(V.tab==='hist') h=V.hist!=null?histDetailView(V.hist):histListView();
  else if(V.tab==='prog') h=progView();
+ else if(V.tab==='stats') h=statsView();
  else h=programView();
  app.innerHTML=h;
  document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.tab));
@@ -668,7 +749,13 @@ function selftest(){
   const last=S.sessions[S.sessions.length-1];
   if(!last.cardio||last.cardio.machine!=='Treadmill'||last.cardio.fields.speed!=='10'||last.cardio.fields.incline!=='8') throw new Error('cardio save');
   if(cardioSummary(last.cardio)!=='Treadmill 20 min · 10 km/h · 8%') throw new Error('cardioSummary');
-  const res=JSON.stringify({ok:true, added:S.sessions.length-(JSON.parse(before).sessions.length), focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), errs:window.__errs});
+  // v3.2 checks: stats
+  const bc=JSON.parse(before).sessions.length;
+  if(!statsView().includes('Stats')) throw new Error('statsView');
+  const st=weekStreaks(); if(!(st.cur>=1&&st.best>=1)) throw new Error('weekStreaks');
+  const bv=weeklyVolume(8); if(bv.length!==8||bv[bv.length-1].count<1) throw new Error('weeklyVolume');
+  const bd=byDay(); if(bd.length!==7||bd.reduce((a,c)=>a+c,0)!==bc+1) throw new Error('byDay');
+  const res=JSON.stringify({ok:true, added:S.sessions.length-bc, focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), streak:st.cur, errs:window.__errs});
   S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
   return res;
  }catch(e){ S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render(); return JSON.stringify({ok:false,err:String(e),errs:window.__errs}); }
