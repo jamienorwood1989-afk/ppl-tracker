@@ -105,11 +105,23 @@ const DEFAULT_PROGRAM={
  core:[ex('Plank',3,'45s','',45),ex('Hanging Leg Raise',3,'12','',60),ex('Cable Woodchop',3,'15/side','',60),ex('Dead Bug',3,'10','',45),ex('Side Plank',2,'30s/side','',45)]
 };
 const DEFAULT_CARDIO={
- push:{type:'Warm-up cardio',detail:'5 min light before lifting'},
- pull:{type:'Warm-up cardio',detail:'5 min light before lifting'},
- legs:{type:'Warm-up cardio',detail:'5 min light before lifting'},
- upper:{type:'Warm-up cardio',detail:'5 min light before lifting'},
- core:{type:'Cool-down walk',detail:'5 min'}
+ push:{machine:'Treadmill',mins:'5'},
+ pull:{machine:'Treadmill',mins:'5'},
+ legs:{machine:'Treadmill',mins:'5'},
+ upper:{machine:'Treadmill',mins:'5'},
+ core:{machine:'Steps',mins:'5'}
+};
+/* v3.1: structured cardio — machine + time + per-machine metrics */
+const CARDIO_MACHINES={
+ 'Treadmill':[{k:'speed',label:'Speed',unit:'km/h'},{k:'incline',label:'Incline',unit:'%'}],
+ 'Steps':[{k:'steps',label:'Steps',unit:''},{k:'incline',label:'Incline',unit:'%'}],
+ 'Row':[{k:'dist',label:'Distance',unit:'m'}],
+ 'Cycle':[{k:'dist',label:'Distance',unit:'km'},{k:'res',label:'Resistance',unit:''}],
+ 'Elliptical':[{k:'speed',label:'Speed',unit:'km/h'}],
+ 'Stairmaster':[{k:'level',label:'Level',unit:''}],
+ 'Swim':[{k:'dist',label:'Distance',unit:'m'}],
+ 'Ski erg':[{k:'dist',label:'Distance',unit:'m'}],
+ 'Other':[]
 };
 
 /* ============ v3: video links (verified 2026-11-05) ============ */
@@ -204,6 +216,7 @@ function loadState(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse
 let S=loadState();
 if(!S || !S.program){ S={program:clone(DEFAULT_PROGRAM), cardio:clone(DEFAULT_CARDIO), sessions:[], work:null, settings:{}}; save(); }
 if(!S.cardio) S.cardio=clone(DEFAULT_CARDIO);
+Object.keys(S.cardio).forEach(f=>{ const c=S.cardio[f]; if(c && !('machine' in c)) S.cardio[f]={machine:'Other',mins:''}; });
 if(S.work===undefined) S.work=null;
 function save(){ localStorage.setItem(LS,JSON.stringify(S)); }
 
@@ -245,7 +258,7 @@ function snapshotWork(f){
      return {w:e.weight||'', r:'', done:false};
     })};
   }),
-  cardio:(S.cardio&&S.cardio[f])?{type:S.cardio[f].type, detail:S.cardio[f].detail, note:'', done:false}:null};
+  cardio:(S.cardio&&S.cardio[f])?{machine:S.cardio[f].machine||'', mins:S.cardio[f].mins||'', fields:{}, note:'', done:false}:null};
 }
 function startSession(f){ S.work=snapshotWork(f); save(); V={tab:'work',hist:null,prog:null}; render(); }
 function cancelWork(){ if(!confirm('Discard this session?')) return; S.work=null; save(); render(); }
@@ -267,14 +280,24 @@ function doneSet(i,j){
  save(); render(); startRest(w.ex[i].rest, w.ex[i].name);
 }
 function cardioToggle(){ const c=S.work&&S.work.cardio; if(c){ c.done=!c.done; save(); render(); } }
+function cardioMachine(v){ const c=S.work&&S.work.cardio; if(c){ c.machine=v; c.fields={}; save(); render(); } }
+function cardioMins(v){ const c=S.work&&S.work.cardio; if(c){ c.mins=v; save(); } }
+function cardioField(k,v){ const c=S.work&&S.work.cardio; if(c){ if(!c.fields)c.fields={}; c.fields[k]=v; save(); } }
 function cardioNote(v){ const c=S.work&&S.work.cardio; if(c){ c.note=v; save(); } }
+function cardioSummary(c){ if(!c) return '';
+ if(!c.machine) return String(c.type||'');
+ const parts=[];
+ if(String(c.mins||'').trim()!=='') parts.push(c.mins+' min');
+ (CARDIO_MACHINES[c.machine]||[]).forEach(f=>{ const v=c.fields&&c.fields[f.k]; if(v!=null&&String(v).trim()!=='') parts.push(v+(f.unit==='%'?'%':(f.unit?' '+f.unit:''))); });
+ return c.machine+(parts.length?' '+parts.join(' · '):'');
+}
 function finishSession(){
  const w=S.work; if(!w)return;
  const exs=w.ex.filter(e=>e.sets.some(s=>s.done||(parseFloat(s.w)>0&&String(s.r).trim()!=='')))
    .map(e=>({name:e.name, sets:e.sets.filter(s=>s.done||(parseFloat(s.w)>0&&String(s.r).trim()!=='')).map(s=>({w:s.w||'', r:s.r||''}))}));
  if(!exs.length){ toast('Log at least one set first'); return; }
  S.sessions.push({date:Date.now(), focus:w.focus, ex:exs, dur:Date.now()-w.started,
-   cardio:w.cardio?{type:w.cardio.type, done:w.cardio.done, note:w.cardio.note||w.cardio.detail||''}:null});
+   cardio:w.cardio?{machine:w.cardio.machine, mins:w.cardio.mins, fields:w.cardio.fields||{}, note:w.cardio.note||'', done:w.cardio.done}:null});
  S.work=null; save();
  V={tab:'hist',hist:S.sessions.length-1,prog:null}; render(); toast('Session saved 💪');
 }
@@ -313,7 +336,7 @@ function nav(t){ V.tab=t; if(t!=='hist')V.hist=null; if(t!=='prog')V.prog=null; 
 
 function lastTopLift(f){ let d=0,w=0; S.sessions.forEach(s=>{ if(s.focus===f && s.date>d){ d=s.date; w=maxW(s); } }); return {d,w}; }
 function homeView(){
- let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
+ let h='<h1>Training</h1><p class="sub">'+new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})+' · kg · <b style="color:var(--good)">App v3.1</b><br><b>Mon</b> Push · <b>Tue</b> Pull · <b>Thu</b> Legs · <b>Fri</b> Upper · Core any day</p>';
  FOCI.forEach(f=>{
   const lt=lastTopLift(f.id);
   h+='<div class="card focuscard" style="border-left:4px solid '+f.color+'" onclick="startSession(\''+f.id+'\')">'
@@ -350,8 +373,16 @@ function sessionView(){
  if(w.cardio){
   h+='<div class="card"><div class="row" style="justify-content:space-between"><div class="exname">🏃 Cardio</div>'
    +'<button class="sm '+(w.cardio.done?'good':'')+'" onclick="cardioToggle()">'+(w.cardio.done?'done ✓':'mark done')+'</button></div>'
-   +'<div class="exmeta">'+esc(w.cardio.type)+' — '+esc(w.cardio.detail)+'</div>'
-   +'<input style="margin-top:8px" placeholder="log: distance / pace / feel (optional)" value="'+esc(w.cardio.note)+'" oninput="cardioNote(this.value)"></div>';
+   +'<select style="margin-top:8px" onchange="cardioMachine(this.value)"><option value="">— choose machine —</option>'
+   +Object.keys(CARDIO_MACHINES).map(m=>'<option value="'+m+'"'+(w.cardio.machine===m?' selected':'')+'>'+m+'</option>').join('')
+   +'</select>';
+  if(w.cardio.machine){
+   h+='<div class="row" style="margin-top:8px"><span class="exmeta" style="min-width:86px">Time</span><input class="num" inputmode="decimal" style="width:84px" placeholder="min" value="'+esc(w.cardio.mins)+'" oninput="cardioMins(this.value)"></div>';
+   (CARDIO_MACHINES[w.cardio.machine]||[]).forEach(f=>{
+    h+='<div class="row" style="margin-top:8px"><span class="exmeta" style="min-width:86px">'+f.label+(f.unit?' ('+f.unit+')':'')+'</span><input class="num" inputmode="decimal" style="width:84px" placeholder="—" value="'+esc((w.cardio.fields&&w.cardio.fields[f.k])||'')+'" oninput="cardioField(\''+f.k+'\',this.value)"></div>';
+   });
+  }
+  h+='<input style="margin-top:8px" placeholder="notes — feel, pace, extra detail (optional)" value="'+esc(w.cardio.note)+'" oninput="cardioNote(this.value)"></div>';
  }
  h+='<button class="good" style="width:100%;min-height:54px;font-size:17px" onclick="finishSession()">Finish session</button>';
  h+='<p class="hint">Tap ✓ to complete a set — the rest timer starts automatically and the next set weight is suggested (+2.5kg when you hit your reps).</p>';
@@ -372,7 +403,7 @@ function histListView(){
   h+='<div class="card" onclick="openHist('+i+')" style="cursor:pointer">'
    +'<div class="row" style="justify-content:space-between"><span class="tag" style="background:'+f.color+'22;color:'+f.color+'">'+f.icon+' '+f.name+'</span>'
    +'<span class="mut">'+fmtDate(s.date)+' · '+fmtTime(s.date)+(s.dur?' · '+fmtDurShort(s.dur):'')+'</span></div>'
-   +'<div class="mut" style="margin-top:6px;font-size:13.5px">'+top?('top lift '+top+'kg · '):''+sessionVolume(s)+'kg volume'+(s.cardio&&s.cardio.done?' · cardio ✓':'')+'</div></div>';
+   +'<div class="mut" style="margin-top:6px;font-size:13.5px">'+top?('top lift '+top+'kg · '):''+sessionVolume(s)+'kg volume'+(s.cardio&&s.cardio.done?' · '+esc(cardioSummary(s.cardio)||'cardio ✓'):'')+'</div></div>';
  });
  return h;
 }
@@ -391,7 +422,7 @@ function histDetailView(i){
   h+='<tr><td><b>'+esc(e.name)+'</b> '+pr+'</td><td class="mut">'+(e.sets||[]).map(st=>(st.w||'—')+'×'+(st.r||'—')).join('<br>')+'</td><td>'+Math.round(mv)+'</td><td>'+(me?me:'—')+'</td></tr>';
  });
  h+='</table></div>';
- if(s.cardio){ h+='<div class="card"><b>🏃 Cardio</b> '+(s.cardio.done?' ✓':' (skipped)')+'<div class="mut" style="margin-top:3px">'+esc(s.cardio.type||'')+' '+(s.cardio.note?'— '+esc(s.cardio.note):'')+'</div></div>'; }
+ if(s.cardio){ h+='<div class="card"><b>🏃 Cardio</b> '+(s.cardio.done?' ✓':' (skipped)')+'<div class="mut" style="margin-top:3px">'+esc(cardioSummary(s.cardio))+(s.cardio.note?' — '+esc(s.cardio.note):'')+'</div></div>'; }
  const bestSets=(s.ex||[]).flatMap(e=>e.sets.map(st=>({w:parseFloat(st.w)||0})));
  h+='<div class="row" style="margin-top:14px"><button class="sm danger" onclick="delSession('+i+')">Delete session</button></div>';
  return h;
@@ -447,8 +478,10 @@ function programView(){
   h+='<button class="sm" style="width:100%" onclick="addEx(\''+f.id+'\')">+ Add exercise</button>'
    +'<div class="hint" style="margin-top:10px">Columns: name · sets · reps · starter kg · rest (s). Reps can be a range like 8-10 or 12/leg.</div>'
    +'<div class="card2"><b>🏃 Cardio</b> '+(S.cardio[f.id]?'':' <span class="mut">none</span>')+'<div class="row" style="margin-top:7px">'
-   +'<input style="flex:1" placeholder="type" value="'+esc(S.cardio[f.id]?S.cardio[f.id].type:'')+'" oninput="setCardio(\''+f.id+'\','+ (S.cardio[f.id]?'type':'type') +',this.value)">'
-   +'<input style="flex:2" placeholder="detail (e.g. 12 min · incline 12)" value="'+esc(S.cardio[f.id]?S.cardio[f.id].detail:'')+'" oninput="setCardio(\''+f.id+'\','+ (S.cardio[f.id]?'detail':'detail') +',this.value)">'
+   +'<select style="flex:1.4" onchange="setCardio(\''+f.id+'\',\'machine\',this.value)"><option value="">— none —</option>'
+   +Object.keys(CARDIO_MACHINES).map(m=>'<option value="'+m+'"'+(S.cardio[f.id]&&S.cardio[f.id].machine===m?' selected':'')+'>'+m+'</option>').join('')
+   +'</select>'
+   +'<input style="width:70px" inputmode="decimal" placeholder="min" value="'+esc(S.cardio[f.id]?S.cardio[f.id].mins||'':'')+'" oninput="setCardio(\''+f.id+'\',\'mins\',this.value)">'
    +'</div><button class="sm" style="margin-top:7px" onclick="toggleCardio(\''+f.id+'\')">'+(S.cardio[f.id]?'remove cardio':'add cardio')+'</button></div></div>';
  });
  h+='<div class="card dangerzone"><button class="sm" onclick="resetProg()">Reset program to defaults</button><button class="sm danger" onclick="eraseAll()">Erase ALL data</button></div>';
@@ -459,8 +492,8 @@ function setP(f,i,k,v){ const e=S.program[f][i]; if(!e)return;
 function addEx(f){ S.program[f].push({name:'New exercise',sets:3,reps:'10',weight:'',rest:90}); save(); render(); }
 function delEx(f,i){ if(!confirm('Remove '+S.program[f][i].name+'?'))return; S.program[f].splice(i,1); save(); render(); }
 function moveEx(f,i,d){ const a=S.program[f]; const j=i+d; if(j<0||j>=a.length)return; [a[i],a[j]]=[a[j],a[i]]; save(); render(); }
-function setCardio(f,k,v){ if(!S.cardio[f]) S.cardio[f]={type:'',detail:''}; S.cardio[f][k]=v; save(); }
-function toggleCardio(f){ if(S.cardio[f]){ delete S.cardio[f]; } else { S.cardio[f]={type:'',detail:''}; } save(); render(); }
+function setCardio(f,k,v){ if(!S.cardio[f]) S.cardio[f]={machine:'',mins:''}; S.cardio[f][k]=v; save(); }
+function toggleCardio(f){ if(S.cardio[f]){ delete S.cardio[f]; } else { S.cardio[f]={machine:'Treadmill',mins:''}; } save(); render(); }
 function resetProg(){ if(!confirm('Replace your program with the built-in default? Sessions are kept.'))return; S.program=clone(DEFAULT_PROGRAM); S.cardio=clone(DEFAULT_CARDIO); save(); render(); toast('Program reset'); }
 function eraseAll(){ if(!confirm('Erase EVERYTHING (program + all sessions)?'))return; if(!confirm('Really? This cannot be undone.'))return; localStorage.removeItem(LS); location.reload(); }
 
@@ -629,9 +662,13 @@ function selftest(){
   addLive('Tricep Dips');
   if(S.work.ex.length!==n0+1) throw new Error('addLive');
   S.work.ex[n0].sets[0]={w:'20',r:'10',done:true};
+  // v3.1 check: structured cardio
+  cardioMachine('Treadmill'); cardioMins('20'); cardioField('speed','10'); cardioField('incline','8'); cardioToggle();
   save(); finishSession();
   const last=S.sessions[S.sessions.length-1];
-  const res=JSON.stringify({ok:true, added:S.sessions.length-(JSON.parse(before).sessions.length), focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), errs:window.__errs});
+  if(!last.cardio||last.cardio.machine!=='Treadmill'||last.cardio.fields.speed!=='10'||last.cardio.fields.incline!=='8') throw new Error('cardio save');
+  if(cardioSummary(last.cardio)!=='Treadmill 20 min · 10 km/h · 8%') throw new Error('cardioSummary');
+  const res=JSON.stringify({ok:true, added:S.sessions.length-(JSON.parse(before).sessions.length), focus:last.focus, ex:last.ex.length, dur:!!last.dur, vol:sessionVolume(last), cardio:cardioSummary(last.cardio), errs:window.__errs});
   S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render();
   return res;
  }catch(e){ S=JSON.parse(before); V={tab:'work',hist:null,prog:null}; save(); render(); return JSON.stringify({ok:false,err:String(e),errs:window.__errs}); }
